@@ -1246,3 +1246,208 @@ func TestParallel(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+func TestPeek(t *testing.T) {
+	t.Parallel()
+
+	testDir := t.TempDir()
+	bq, err := NewMmapQueue(testDir)
+	if err != nil {
+		t.Fatalf("unable to get BigQueue :: %v", err)
+	}
+	defer func() {
+		if err := bq.Close(); err != nil {
+			t.Fatalf("error in closing bigqueue :: %v", err)
+		}
+	}()
+
+	// Peek on empty queue should return ErrEmptyQueue
+	if msg, err := bq.Peek(); err != ErrEmptyQueue || msg != nil {
+		t.Fatalf("Peek should return empty queue error, returned: %v", err)
+	}
+
+	msg := []byte("abcdefghij")
+	if err := bq.Enqueue(msg); err != nil {
+		t.Fatalf("enqueue failed :: %v", err)
+	}
+
+	// First Peek should return the message without removing it
+	if peekedMsg, err := bq.Peek(); err != nil {
+		t.Fatalf("Peek failed :: %v", err)
+	} else if !bytes.Equal(msg, peekedMsg) {
+		t.Fatalf("messages don't match :: expected %s, actual: %s", string(msg), string(peekedMsg))
+	}
+
+	// Queue should not be empty after Peek
+	if bq.IsEmpty() {
+		t.Fatalf("queue should not be empty after Peek")
+	}
+
+	// Second Peek should return the same message again
+	if peekedMsg, err := bq.Peek(); err != nil {
+		t.Fatalf("second Peek failed :: %v", err)
+	} else if !bytes.Equal(msg, peekedMsg) {
+		t.Fatalf("messages don't match on second Peek :: expected %s, actual: %s", string(msg), string(peekedMsg))
+	}
+
+	// Dequeue should still return the message
+	if dequeuedMsg, err := bq.Dequeue(); err != nil {
+		t.Fatalf("Dequeue after Peek failed :: %v", err)
+	} else if !bytes.Equal(msg, dequeuedMsg) {
+		t.Fatalf("messages don't match after Dequeue :: expected %s, actual: %s", string(msg), string(dequeuedMsg))
+	}
+
+	// Queue should be empty now
+	if !bq.IsEmpty() {
+		t.Fatalf("queue should be empty after Dequeue")
+	}
+
+	// Peek on empty queue should return ErrEmptyQueue again
+	if msg, err := bq.Peek(); err != ErrEmptyQueue || msg != nil {
+		t.Fatalf("Peek should return empty queue error after Dequeue, returned: %v", err)
+	}
+}
+
+func TestPeekString(t *testing.T) {
+	t.Parallel()
+
+	testDir := t.TempDir()
+	bq, err := NewMmapQueue(testDir)
+	if err != nil {
+		t.Fatalf("unable to get BigQueue :: %v", err)
+	}
+	defer func() {
+		if err := bq.Close(); err != nil {
+			t.Fatalf("error in closing bigqueue :: %v", err)
+		}
+	}()
+
+	// PeekString on empty queue should return ErrEmptyQueue
+	if msg, err := bq.PeekString(); err != ErrEmptyQueue || msg != "" {
+		t.Fatalf("PeekString should return empty queue error, returned: %v", err)
+	}
+
+	msg := "hello bigqueue"
+	if err := bq.EnqueueString(msg); err != nil {
+		t.Fatalf("enqueue failed :: %v", err)
+	}
+
+	// PeekString should return the message without removing it
+	if peekedMsg, err := bq.PeekString(); err != nil {
+		t.Fatalf("PeekString failed :: %v", err)
+	} else if msg != peekedMsg {
+		t.Fatalf("messages don't match :: expected %s, actual: %s", msg, peekedMsg)
+	}
+
+	// Queue should not be empty after PeekString
+	if bq.IsEmpty() {
+		t.Fatalf("queue should not be empty after PeekString")
+	}
+
+	// DequeueString should still return the message
+	if dequeuedMsg, err := bq.DequeueString(); err != nil {
+		t.Fatalf("DequeueString after PeekString failed :: %v", err)
+	} else if msg != dequeuedMsg {
+		t.Fatalf("messages don't match after DequeueString :: expected %s, actual: %s", msg, dequeuedMsg)
+	}
+}
+
+func TestConsumerPeek(t *testing.T) {
+	t.Parallel()
+
+	testDir := t.TempDir()
+	bq, err := NewMmapQueue(testDir)
+	if err != nil {
+		t.Fatalf("unable to get BigQueue :: %v", err)
+	}
+	defer func() {
+		if err := bq.Close(); err != nil {
+			t.Fatalf("error in closing bigqueue :: %v", err)
+		}
+	}()
+
+	c, err := bq.NewConsumer("consumer1")
+	if err != nil {
+		t.Fatalf("error creating consumer :: %v", err)
+	}
+
+	// Peek on empty queue should return ErrEmptyQueue
+	if msg, err := c.Peek(); err != ErrEmptyQueue || msg != nil {
+		t.Fatalf("Consumer.Peek should return empty queue error, returned: %v", err)
+	}
+
+	msg := []byte("consumer peek test")
+	if err := bq.Enqueue(msg); err != nil {
+		t.Fatalf("enqueue failed :: %v", err)
+	}
+
+	// Peek should return message without removing it
+	if peekedMsg, err := c.Peek(); err != nil {
+		t.Fatalf("Consumer.Peek failed :: %v", err)
+	} else if !bytes.Equal(msg, peekedMsg) {
+		t.Fatalf("messages don't match :: expected %s, actual: %s", string(msg), string(peekedMsg))
+	}
+
+	if c.IsEmpty() {
+		t.Fatalf("consumer should not be empty after Peek")
+	}
+
+	// Dequeue should still return the same message
+	if dequeuedMsg, err := c.Dequeue(); err != nil {
+		t.Fatalf("Consumer.Dequeue after Peek failed :: %v", err)
+	} else if !bytes.Equal(msg, dequeuedMsg) {
+		t.Fatalf("messages don't match after Dequeue :: expected %s, actual: %s", string(msg), string(dequeuedMsg))
+	}
+
+	if !c.IsEmpty() {
+		t.Fatalf("consumer should be empty after Dequeue")
+	}
+}
+
+func TestConsumerPeekString(t *testing.T) {
+	t.Parallel()
+
+	testDir := t.TempDir()
+	bq, err := NewMmapQueue(testDir)
+	if err != nil {
+		t.Fatalf("unable to get BigQueue :: %v", err)
+	}
+	defer func() {
+		if err := bq.Close(); err != nil {
+			t.Fatalf("error in closing bigqueue :: %v", err)
+		}
+	}()
+
+	c, err := bq.NewConsumer("consumer2")
+	if err != nil {
+		t.Fatalf("error creating consumer :: %v", err)
+	}
+
+	// PeekString on empty queue should return ErrEmptyQueue
+	if msg, err := c.PeekString(); err != ErrEmptyQueue || msg != "" {
+		t.Fatalf("Consumer.PeekString should return empty queue error, returned: %v", err)
+	}
+
+	msg := "consumer peek string test"
+	if err := bq.EnqueueString(msg); err != nil {
+		t.Fatalf("enqueue failed :: %v", err)
+	}
+
+	// PeekString should return message without removing it
+	if peekedMsg, err := c.PeekString(); err != nil {
+		t.Fatalf("Consumer.PeekString failed :: %v", err)
+	} else if msg != peekedMsg {
+		t.Fatalf("messages don't match :: expected %s, actual: %s", msg, peekedMsg)
+	}
+
+	if c.IsEmpty() {
+		t.Fatalf("consumer should not be empty after PeekString")
+	}
+
+	// DequeueString should still return the same message
+	if dequeuedMsg, err := c.DequeueString(); err != nil {
+		t.Fatalf("Consumer.DequeueString after PeekString failed :: %v", err)
+	} else if msg != dequeuedMsg {
+		t.Fatalf("messages don't match after DequeueString :: expected %s, actual: %s", msg, dequeuedMsg)
+	}
+}

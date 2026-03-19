@@ -33,6 +33,12 @@ func (q *MmapQueue) Dequeue() ([]byte, error) {
 	return q.dequeue(q.dc)
 }
 
+// Peek returns the head element of the queue without removing it.
+// This function uses the default consumer to peek from the queue.
+func (q *MmapQueue) Peek() ([]byte, error) {
+	return q.peek(q.dc)
+}
+
 func (q *MmapQueue) dequeue(base int64) ([]byte, error) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
@@ -50,6 +56,12 @@ func (q *MmapQueue) dequeue(base int64) ([]byte, error) {
 // This function uses the default consumer to consume from the queue.
 func (q *MmapQueue) DequeueString() (string, error) {
 	return q.dequeueString(q.dc)
+}
+
+// PeekString returns the head string element of the queue without removing it.
+// This function uses the default consumer to peek from the queue.
+func (q *MmapQueue) PeekString() (string, error) {
+	return q.peekString(q.dc)
 }
 
 func (q *MmapQueue) dequeueString(base int64) (string, error) {
@@ -93,6 +105,60 @@ func (q *MmapQueue) dequeueReader(r reader, base int64) error {
 	q.md.putConsumerHead(base, aid, offset)
 	q.incrMutOps()
 
+	return nil
+}
+
+func (q *MmapQueue) peek(base int64) ([]byte, error) {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
+	if err := q.peekReader(&q.br, base); err != nil {
+		q.br.b = nil
+		return nil, err
+	}
+	r := q.br.b
+	q.br.b = nil
+	return r, nil
+}
+
+func (q *MmapQueue) peekString(base int64) (string, error) {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
+	if err := q.peekReader(&q.sr, base); err != nil {
+		q.sr.sb.Reset()
+		return "", err
+	}
+	r := q.sr.sb.String()
+	q.sr.sb.Reset()
+	return r, nil
+}
+
+// peekReader reads one element of the queue into the given reader
+// without advancing the head pointer (non-consuming read).
+func (q *MmapQueue) peekReader(r reader, base int64) error {
+	if q.isEmptyNoLock(base) {
+		return ErrEmptyQueue
+	}
+
+	// read head
+	aid, offset := q.md.getConsumerHead(base)
+
+	// read length
+	newAid, newOffset, length, err := q.readLength(aid, offset)
+	if err != nil {
+		return err
+	}
+	aid, offset = newAid, newOffset
+
+	// read message
+	r.grow(length)
+	_, _, err = q.readBytes(r, aid, offset, length)
+	if err != nil {
+		return err
+	}
+
+	// head is NOT updated — this is a peek (non-consuming read)
 	return nil
 }
 

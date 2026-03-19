@@ -17,7 +17,17 @@ func (c *Consumer) Dequeue() ([]byte, error) {
 	return c.mq.dequeue(c.base)
 }
 
+// Peek returns the head element of the queue without removing it.
+func (c *Consumer) Peek() ([]byte, error) {
+	return c.mq.peek(c.base)
+}
+
 // DequeueString removes a string element from the queue and returns it.
 func (c *Consumer) DequeueString() (string, error) {
 	return c.mq.dequeueString(c.base)
+}
+
+// PeekString returns the head string element of the queue without removing it.
+func (c *Consumer) PeekString() (string, error) {
+	return c.mq.peekString(c.base)
 }
