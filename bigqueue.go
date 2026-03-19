@@ -22,6 +22,11 @@ var (
 	ErrDifferentQueues = errors.New("consumers from different queues")
 )
 
+// EnqueueListener is a function type that is called when a new message
+// is successfully enqueued. Listeners are invoked after the queue lock
+// is released, so they may safely call other queue operations.
+type EnqueueListener func()
+
 // MmapQueue implements Queue interface.
 type MmapQueue struct {
 	conf      *bqConfig
@@ -31,10 +36,11 @@ type MmapQueue struct {
 	mutOps    int64
 	lastFlush time.Time
 
-	lock  sync.Mutex // protects bigqueue
-	drain chan struct{}
-	quit  chan struct{}
-	wg    sync.WaitGroup
+	lock      sync.Mutex // protects bigqueue
+	drain     chan struct{}
+	quit      chan struct{}
+	wg        sync.WaitGroup
+	listeners []EnqueueListener
 
 	br bytesReader
 	sr stringReader
@@ -182,6 +188,17 @@ func (q *MmapQueue) Flush() error {
 	q.mutOps = 0
 	q.lastFlush = time.Now()
 	return nil
+}
+
+// SetEnqueueListener registers a listener that is called after each
+// successful Enqueue or EnqueueString operation. Multiple listeners can
+// be registered and all of them will be called in the order they were
+// added. Listeners are invoked outside the queue lock so they may safely
+// perform further queue operations without causing a deadlock.
+func (q *MmapQueue) SetEnqueueListener(fn EnqueueListener) {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+	q.listeners = append(q.listeners, fn)
 }
 
 func (q *MmapQueue) incrMutOps() {

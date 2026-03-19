@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -1244,5 +1245,135 @@ func TestParallel(t *testing.T) {
 	rwg.Wait()
 	if fail {
 		t.FailNow()
+	}
+}
+
+func TestEnqueueListener(t *testing.T) {
+	t.Parallel()
+
+	testDir := t.TempDir()
+	bq, err := NewMmapQueue(testDir)
+	if err != nil {
+		t.Fatalf("unable to get BigQueue: %v", err)
+	}
+	defer func() {
+		if err := bq.Close(); err != nil {
+			t.Fatalf("error in closing bigqueue :: %v", err)
+		}
+	}()
+
+	var count atomic.Int32
+	bq.SetEnqueueListener(func() {
+		count.Add(1)
+	})
+
+	msgs := [][]byte{[]byte("msg1"), []byte("msg2"), []byte("msg3")}
+	for _, msg := range msgs {
+		if err := bq.Enqueue(msg); err != nil {
+			t.Fatalf("unable to enqueue message :: %v", err)
+		}
+	}
+
+	if int(count.Load()) != len(msgs) {
+		t.Fatalf("expected listener to be called %d times, got %d", len(msgs), count.Load())
+	}
+}
+
+func TestEnqueueStringListener(t *testing.T) {
+	t.Parallel()
+
+	testDir := t.TempDir()
+	bq, err := NewMmapQueue(testDir)
+	if err != nil {
+		t.Fatalf("unable to get BigQueue: %v", err)
+	}
+	defer func() {
+		if err := bq.Close(); err != nil {
+			t.Fatalf("error in closing bigqueue :: %v", err)
+		}
+	}()
+
+	var count atomic.Int32
+	bq.SetEnqueueListener(func() {
+		count.Add(1)
+	})
+
+	msgs := []string{"hello", "world"}
+	for _, msg := range msgs {
+		if err := bq.EnqueueString(msg); err != nil {
+			t.Fatalf("unable to enqueue string :: %v", err)
+		}
+	}
+
+	if int(count.Load()) != len(msgs) {
+		t.Fatalf("expected listener to be called %d times, got %d", len(msgs), count.Load())
+	}
+}
+
+func TestMultipleEnqueueListeners(t *testing.T) {
+	t.Parallel()
+
+	testDir := t.TempDir()
+	bq, err := NewMmapQueue(testDir)
+	if err != nil {
+		t.Fatalf("unable to get BigQueue: %v", err)
+	}
+	defer func() {
+		if err := bq.Close(); err != nil {
+			t.Fatalf("error in closing bigqueue :: %v", err)
+		}
+	}()
+
+	var count1, count2 atomic.Int32
+	bq.SetEnqueueListener(func() { count1.Add(1) })
+	bq.SetEnqueueListener(func() { count2.Add(1) })
+
+	if err := bq.Enqueue([]byte("msg")); err != nil {
+		t.Fatalf("unable to enqueue message :: %v", err)
+	}
+
+	if count1.Load() != 1 {
+		t.Fatalf("expected first listener to be called once, got %d", count1.Load())
+	}
+	if count2.Load() != 1 {
+		t.Fatalf("expected second listener to be called once, got %d", count2.Load())
+	}
+}
+
+func TestEnqueueListenerCanDequeue(t *testing.T) {
+	t.Parallel()
+
+	testDir := t.TempDir()
+	bq, err := NewMmapQueue(testDir)
+	if err != nil {
+		t.Fatalf("unable to get BigQueue: %v", err)
+	}
+	defer func() {
+		if err := bq.Close(); err != nil {
+			t.Fatalf("error in closing bigqueue :: %v", err)
+		}
+	}()
+
+	received := make(chan []byte, 1)
+	bq.SetEnqueueListener(func() {
+		msg, err := bq.Dequeue()
+		if err != nil {
+			return
+		}
+		received <- msg
+	})
+
+	expected := []byte("notify-me")
+	if err := bq.Enqueue(expected); err != nil {
+		t.Fatalf("unable to enqueue message :: %v", err)
+	}
+
+	select {
+	case msg := <-received:
+		if !bytes.Equal(msg, expected) {
+			t.Fatalf("expected %q, got %q", expected, msg)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for listener to dequeue message")
 	}
 }

@@ -3,22 +3,34 @@ package bigqueue
 // Enqueue adds a new slice of byte element to the tail of the queue.
 func (q *MmapQueue) Enqueue(message []byte) error {
 	q.lock.Lock()
-	defer q.lock.Unlock()
-
 	q.bw.b = message
 	err := q.enqueue(&q.bw)
 	q.bw.b = nil
+	listeners := append([]EnqueueListener(nil), q.listeners...)
+	q.lock.Unlock()
+
+	if err == nil {
+		for _, fn := range listeners {
+			fn()
+		}
+	}
 	return err
 }
 
 // EnqueueString adds a new string element to the tail of the queue.
 func (q *MmapQueue) EnqueueString(message string) error {
 	q.lock.Lock()
-	defer q.lock.Unlock()
-
 	q.sw.s = message
 	err := q.enqueue(&q.sw)
 	q.sw.s = ""
+	listeners := append([]EnqueueListener(nil), q.listeners...)
+	q.lock.Unlock()
+
+	if err == nil {
+		for _, fn := range listeners {
+			fn()
+		}
+	}
 	return err
 }
 

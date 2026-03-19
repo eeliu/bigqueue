@@ -61,6 +61,15 @@
 //
 //	isEmpty := bq.IsEmpty()
 //
+// bigqueue supports enqueue listeners that are called when a new message
+// is successfully enqueued. Multiple listeners can be registered and are
+// invoked outside the queue lock, so they may safely perform further queue
+// operations. This is useful for building notification or reactive systems.
+//
+//	bq.SetEnqueueListener(func() {
+//	    elem, err := bq.Dequeue()
+//	})
+//
 // bigqueue allows reading data from bigqueue using consumers similar to Kafka. This allows
 // multiple consumers from reading data at different offsets (not in thread safe manner yet).
 // The offsets of each consumer are persisted on disk and can be retrieved by creating a
