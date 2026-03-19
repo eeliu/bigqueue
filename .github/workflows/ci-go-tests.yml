@@ -23,6 +23,11 @@ jobs:
           go-version: "1.23"
           cache-dependency-path: go.sum
 
+      - name: Set system limits
+        run: |
+          ulimit -n 50000
+          sudo sysctl -w vm.max_map_count=262144
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9.2.0
 

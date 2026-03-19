@@ -197,3 +197,7 @@ BenchmarkDequeueString/ArenaSize-128MB/MessageSize-4MB/MaxMem-NoLimit-12        
 ulimit -n 50000
 echo 262144 > /proc/sys/vm/max_map_count
 ```
+
+`ulimit -n 50000` raises the maximum number of open file descriptors per process. bigqueue opens a file descriptor for each arena file when mapping it into memory. Although each file descriptor is closed immediately after the `mmap` call succeeds, the kernel still counts it toward the process limit while it is open. Benchmarks with small arena sizes create many arena files in quick succession, and the default limit (typically 1024) can be exhausted, causing `open` to fail with `EMFILE`. Setting the limit to 50000 gives benchmarks sufficient headroom.
+
+`echo 262144 > /proc/sys/vm/max_map_count` raises the kernel's limit on the number of distinct virtual memory areas (VMAs) a single process may have. Every `mmap` call adds at least one VMA to the process's address space. With small arenas (e.g. 4 KB) and a large number of benchmark iterations, the total number of active mappings can exceed the default limit (65530), causing `mmap` to fail with `ENOMEM`. Setting the limit to 262144 prevents this failure during high-throughput benchmarks.
