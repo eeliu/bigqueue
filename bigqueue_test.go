@@ -132,7 +132,7 @@ func TestEnqueueLargeMessage(t *testing.T) {
 		}
 	}()
 
-	msg := make([]byte, 0)
+	msg := make([]byte, 0, cDefaultArenaSize-8)
 	for range cDefaultArenaSize - 8 {
 		m := []byte("a")
 		msg = append(msg, m...)
@@ -166,7 +166,7 @@ func TestEnqueueOverlapLength(t *testing.T) {
 		}
 	}()
 
-	msg1 := make([]byte, 0)
+	msg1 := make([]byte, 0, cDefaultArenaSize-12)
 	for range cDefaultArenaSize - 12 {
 		m := []byte("a")
 		msg1 = append(msg1, m...)
@@ -175,7 +175,7 @@ func TestEnqueueOverlapLength(t *testing.T) {
 		t.Fatalf("enqueue failed :: %v", err)
 	}
 
-	msg2 := make([]byte, 0)
+	msg2 := make([]byte, 0, cDefaultArenaSize-4)
 	for range cDefaultArenaSize - 4 {
 		m := []byte("a")
 		msg2 = append(msg2, m...)
@@ -216,7 +216,7 @@ func TestEnqueueLargeNumberOfMessages(t *testing.T) {
 	}()
 
 	numMessages := 10
-	lengths := make([]int, 0)
+	lengths := make([]int, 0, numMessages)
 	alphabets := "abcdefghijklmnopqrstuvwxyz"
 	for range numMessages {
 		msgLen := rand.Intn(cDefaultArenaSize) + cDefaultArenaSize
@@ -1742,9 +1742,9 @@ func TestEnqueueWithTagRandomPayloads(t *testing.T) {
 		{randomBytes(16), 0x12, "non-utf8-random-16"},
 		{randomBytes(64), 0x13, "non-utf8-random-64"},
 		// Chinese (Simplified & Traditional)
-		{[]byte("你好世界"), 0x20, "chinese-simplified"},
-		{[]byte("繁體中文測試"), 0x21, "chinese-traditional"},
-		{[]byte("中华人民共和国"), 0x22, "chinese-long"},
+		{[]byte("\u4f60\u597d\u4e16\u754c"), 0x20, "chinese-simplified"},              // 你好世界
+		{[]byte("\u7e41\u9ad4\u4e2d\u6587\u6e2c\u8a66"), 0x21, "chinese-traditional"}, // 繁體中文測試
+		{[]byte("\u4e2d\u534e\u4eba\u6c11\u5171\u548c\u56fd"), 0x22, "chinese-long"},  // 中华人民共和国
 		// Korean
 		{[]byte("안녕하세요"), 0x30, "korean-hello"},
 		{[]byte("대한민국"), 0x31, "korean-country"},
