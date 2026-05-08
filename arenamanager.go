@@ -66,6 +66,7 @@ func (m *arenaManager) gc() {
 	// update global head to the minimum among all consumers.
 	// this is to ensure new consumers start from the earliest available data.
 	m.md.putHead(minHeadAid, minHeadOff)
+	_ = m.md.flush()
 
 	// we keep maxArenasToKeep arenas before the minHeadAid
 	// everything before (minHeadAid - maxArenasToKeep) can be deleted.
@@ -82,21 +83,21 @@ func (m *arenaManager) gc() {
 		}
 		delete(m.arenas, aid)
 
-		arenaPath := m.setArenaPath(aid)
+		arenaPath := m.getArenaPath(aid)
 		if _, err := os.Stat(arenaPath); err == nil {
 			_ = os.Remove(arenaPath)
 		}
 	}
 }
 
-// setArenaPath returns the full path for a given arena ID.
-func (m *arenaManager) setArenaPath(aid int) string {
+// getArenaPath returns the full path for a given arena ID.
+func (m *arenaManager) getArenaPath(aid int) string {
 	fileName := fmt.Sprintf("%d%s", aid, cArenaFileSuffix)
 	return path.Join(m.dir, fileName)
 }
 
-// getArena returns arena for a given arena ID
-func (m *arenaManager) getArena(aid int) (*mmap.File, error) {
+// loadOrGetArena returns arena for a given arena ID
+func (m *arenaManager) loadOrGetArena(aid int) (*mmap.File, error) {
 	if aa, ok := m.arenas[aid]; ok && aa != nil {
 		return aa, nil
 	}
@@ -117,6 +118,8 @@ func (m *arenaManager) getArena(aid int) (*mmap.File, error) {
 	if err := m.loadArena(aid); err != nil {
 		return nil, err
 	}
+
+	m.gc()
 
 	return m.arenas[aid], nil
 }
@@ -140,23 +143,16 @@ func (m *arenaManager) ensureEnoughMem() error {
 	// available for a new arena to be loaded into memory
 	tailAid, _ := m.md.getTail()
 	headAid, _ := m.md.getHead()
-	curAid := tailAid + 1
-	for m.conf.maxInMemArenas-m.inMem <= 0 {
-		curAid--
-
-		if curAid < 0 {
-			panic("not enough memory to hold arenas in memory")
+	for aid, aa := range m.arenas {
+		if m.inMem < m.conf.maxInMemArenas {
+			break
 		}
 
-		if curAid == tailAid || curAid == headAid {
+		if aid == tailAid || aid == headAid || aa == nil {
 			continue
 		}
 
-		if _, ok := m.arenas[curAid]; !ok {
-			continue
-		}
-
-		if err := m.unloadArena(curAid); err != nil {
+		if err := m.unloadArena(aid); err != nil {
 			return err
 		}
 	}
@@ -170,7 +166,7 @@ func (m *arenaManager) loadArena(aid int) error {
 		return nil
 	}
 
-	arenaPath := m.setArenaPath(aid)
+	arenaPath := m.getArenaPath(aid)
 	aa, err := newArena(arenaPath, m.conf.arenaSize)
 	if err != nil {
 		return err
@@ -193,7 +189,7 @@ func (m *arenaManager) unloadArena(aid int) error {
 	}
 
 	m.inMem--
-	m.arenas[aid] = nil
+	delete(m.arenas, aid)
 	return nil
 }
 
