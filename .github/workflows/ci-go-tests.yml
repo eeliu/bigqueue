@@ -18,14 +18,21 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Setup Go 1.23.x
+      - name: Setup Go 1.25.x
         uses: actions/setup-go@v6
         with:
-          go-version: "1.23"
+          go-version: "1.25"
           cache-dependency-path: go.sum
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9.2.0
+        uses: golangci-lint/golangci-lint-action@v6.1.1
 
       - name: Run Unit Tests
-        run: go test -race -v ./...
+        run: go test -race -v -coverprofile=coverage.txt -covermode=atomic ./...
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.txt
+          fail_ci_if_error: true

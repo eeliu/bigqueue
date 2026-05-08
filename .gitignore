@@ -14,3 +14,4 @@
 # IDE files
 .idea/*
 tagged
+coverage.txt

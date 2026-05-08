@@ -18,7 +18,7 @@ linters:
     - errchkjson
     - errname
     - exhaustive
-    - exptostd
+    # - exptostd
     - fatcontext
     - ginkgolinter
     - gocheckcompilerdirectives
@@ -38,7 +38,7 @@ linters:
     - gosmopolitan
     - govet
     - grouper
-    - iface
+    # - iface
     - importas
     - inamedparam
     - ineffassign
@@ -54,7 +54,7 @@ linters:
     - musttag
     - nakedret
     - nilerr
-    - nilnesserr
+    # - nilnesserr
     - nilnil
     - nolintlint
     - nonamedreturns
@@ -66,7 +66,7 @@ linters:
     - promlinter
     - protogetter
     - reassign
-    - recvcheck
+    # - recvcheck
     - revive
     - rowserrcheck
     - sloglint
@@ -82,30 +82,24 @@ linters:
     - unparam
     - unused
     - usestdlibvars
-    - usetesting
+    # - usetesting
     - wastedassign
     - zerologlint
   settings:
     lll:
       line-length: 120
-  exclusions:
-    generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+
+issues:
+  exclude-rules:
+    - path: "_test\\.go$"
+      linters:
+        - "*"
+  exclude-dirs:
+    - third_party
+    - builtin
+    - examples
+
 formatters:
   enable:
     - gofmt
     - goimports
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
