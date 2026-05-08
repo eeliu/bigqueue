@@ -147,6 +147,11 @@ func (q *MmapQueue) dequeueReader(r reader, base int64) error {
 
 	// update head
 	q.md.putConsumerHead(base, aid, offset)
+	minAid, minOffset := q.md.getMinConsumerHead()
+	q.md.putHead(minAid, minOffset)
+	if err := q.am.trimBefore(minAid); err != nil {
+		return err
+	}
 	q.incrMutOps()
 
 	return nil

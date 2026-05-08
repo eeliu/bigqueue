@@ -1380,6 +1380,53 @@ func TestEnqueueWithTagLargeMessage(t *testing.T) {
 	}
 }
 
+func TestDequeueWithTagCleansConsumedArenaFiles(t *testing.T) {
+	t.Parallel()
+
+	arenaSize := os.Getpagesize()
+	testDir := t.TempDir()
+	bq, err := NewMmapQueue(testDir, SetArenaSize(arenaSize),
+		SetPeriodicFlushOps(0), SetPeriodicFlushDuration(0))
+	if err != nil {
+		t.Fatalf("unable to get BigQueue :: %v", err)
+	}
+	defer func() {
+		if err := bq.Close(); err != nil {
+			t.Fatalf("error in closing bigqueue :: %v", err)
+		}
+	}()
+
+	payload := bytes.Repeat([]byte("x"), arenaSize/2)
+	tag := []byte{1}
+	for range 20 {
+		if err := bq.EnqueueWithTag(payload, tag); err != nil {
+			t.Fatalf("EnqueueWithTag failed :: %v", err)
+		}
+	}
+
+	for range 20 {
+		if _, _, err := bq.DequeueWithTag(); err != nil {
+			t.Fatalf("DequeueWithTag failed :: %v", err)
+		}
+	}
+
+	files, err := os.ReadDir(testDir)
+	if err != nil {
+		t.Fatalf("unable to read test dir :: %v", err)
+	}
+
+	arenaFiles := 0
+	for _, f := range files {
+		if strings.HasSuffix(f.Name(), "_arena.dat") {
+			arenaFiles++
+		}
+	}
+
+	if arenaFiles != 1 {
+		t.Fatalf("expected 1 arena file after full dequeue, got %d", arenaFiles)
+	}
+}
+
 func TestEnqueueWithTagConsumer(t *testing.T) {
 	t.Parallel()
 

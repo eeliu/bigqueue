@@ -123,10 +123,10 @@ func (m *metadata) getHead() (int, int) {
 }
 
 // putHead stores the value of head in the metadata.
-// func (m *metadata) putHead(aid, pos int) {
-// 	m.aa.WriteUint64At(uint64(aid), 8)
-// 	m.aa.WriteUint64At(uint64(pos), 16)
-// }
+func (m *metadata) putHead(aid, pos int) {
+	m.aa.WriteUint64At(uint64(aid), 8)
+	m.aa.WriteUint64At(uint64(pos), 16)
+}
 
 // getTail reads the values of tail of the queue from the metadata arena.
 // Tail of a bigqueue, similar to head, can be identified using:
@@ -262,6 +262,29 @@ func (m *metadata) getConsumer(name string) (int64, error) {
 	m.size = newsize
 	m.putConsumer(oldsize, name)
 	return oldsize, nil
+}
+
+// getMinConsumerHead returns the earliest consumer head among all consumers.
+func (m *metadata) getMinConsumerHead() (int, int) {
+	var (
+		minAid int
+		minPos int
+		init   bool
+	)
+
+	for _, base := range m.co {
+		aid, pos := m.getConsumerHead(base)
+		if !init || aid < minAid || (aid == minAid && pos < minPos) {
+			minAid = aid
+			minPos = pos
+			init = true
+		}
+	}
+
+	if !init {
+		return m.getTail()
+	}
+	return minAid, minPos
 }
 
 // flush writes the memory state of the metadata arena on to disk.

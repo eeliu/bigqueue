@@ -2,6 +2,7 @@ package bigqueue
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"strconv"
 	"syscall"
@@ -69,7 +70,7 @@ func (m *arenaManager) getArena(aid int) (*mmap.File, error) {
 		return nil, err
 	}
 
-	return m.arenas[aid], nil
+	return m.arenas[relAid], nil
 }
 
 // ensureEnoughMem ensures that at least 1 new arena can be brought into memory.
@@ -116,11 +117,7 @@ func (m *arenaManager) loadArena(aid int) error {
 		return nil
 	}
 
-	m.fullPath = append(m.fullPath[:0], m.dir...)
-	m.fullPath = append(m.fullPath, '/')
-	m.fullPath = strconv.AppendInt(m.fullPath, int64(aid), 10)
-	m.fullPath = append(m.fullPath, cArenaFileSuffix...)
-	aa, err := newArena(string(m.fullPath), m.conf.arenaSize)
+	aa, err := newArena(m.arenaPath(aid), m.conf.arenaSize)
 	if err != nil {
 		return err
 	}
@@ -128,6 +125,14 @@ func (m *arenaManager) loadArena(aid int) error {
 	m.inMem++
 	m.arenas[aid-m.baseAid] = aa
 	return nil
+}
+
+func (m *arenaManager) arenaPath(aid int) string {
+	m.fullPath = append(m.fullPath[:0], m.dir...)
+	m.fullPath = append(m.fullPath, '/')
+	m.fullPath = strconv.AppendInt(m.fullPath, int64(aid), 10)
+	m.fullPath = append(m.fullPath, cArenaFileSuffix...)
+	return string(m.fullPath)
 }
 
 // unloadArena will remove the arena from memory.
@@ -142,6 +147,34 @@ func (m *arenaManager) unloadArena(aid int) error {
 
 	m.inMem--
 	m.arenas[aid-m.baseAid] = nil
+	return nil
+}
+
+// trimBefore deletes all arena files with arena id < headAid.
+func (m *arenaManager) trimBefore(headAid int) error {
+	if headAid <= m.baseAid {
+		return nil
+	}
+
+	drop := headAid - m.baseAid
+	if drop > len(m.arenas) {
+		drop = len(m.arenas)
+	}
+
+	for i := 0; i < drop; i++ {
+		aid := m.baseAid + i
+		if err := m.unloadArena(aid); err != nil {
+			return err
+		}
+
+		if err := os.Remove(m.arenaPath(aid)); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("error in deleting arena file :: %w", err)
+		}
+	}
+
+	m.arenas = m.arenas[drop:]
+	m.baseAid = headAid
+
 	return nil
 }
 
