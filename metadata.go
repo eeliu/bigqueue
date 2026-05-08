@@ -264,29 +264,6 @@ func (m *metadata) getConsumer(name string) (int64, error) {
 	return oldsize, nil
 }
 
-// getMinConsumerHead returns the earliest consumer head among all consumers.
-func (m *metadata) getMinConsumerHead() (int, int) {
-	var (
-		minAid int
-		minPos int
-		init   bool
-	)
-
-	for _, base := range m.co {
-		aid, pos := m.getConsumerHead(base)
-		if !init || aid < minAid || (aid == minAid && pos < minPos) {
-			minAid = aid
-			minPos = pos
-			init = true
-		}
-	}
-
-	if !init {
-		return m.getTail()
-	}
-	return minAid, minPos
-}
-
 // flush writes the memory state of the metadata arena on to disk.
 func (m *metadata) flush() error {
 	return m.aa.Flush(syscall.MS_SYNC)

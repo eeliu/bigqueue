@@ -87,6 +87,14 @@ func (q *MmapQueue) dequeueWithTag(base int64) ([]byte, []byte, error) {
 		q.br.b = nil
 		return nil, nil, err
 	}
+	if base == q.dc && q.hasOnlyDefaultConsumerNoLock() {
+		headAid, headOffset := q.md.getConsumerHead(base)
+		q.md.putHead(headAid, headOffset)
+		if err := q.am.trimBefore(headAid); err != nil {
+			q.br.b = nil
+			return nil, nil, err
+		}
+	}
 	r := q.br.b
 	q.br.b = nil
 
@@ -147,11 +155,6 @@ func (q *MmapQueue) dequeueReader(r reader, base int64) error {
 
 	// update head
 	q.md.putConsumerHead(base, aid, offset)
-	minAid, minOffset := q.md.getMinConsumerHead()
-	q.md.putHead(minAid, minOffset)
-	if err := q.am.trimBefore(minAid); err != nil {
-		return err
-	}
 	q.incrMutOps()
 
 	return nil

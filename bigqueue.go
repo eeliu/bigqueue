@@ -210,6 +210,10 @@ func (q *MmapQueue) incrMutOps() {
 	}
 }
 
+func (q *MmapQueue) hasOnlyDefaultConsumerNoLock() bool {
+	return len(q.md.co) == 1
+}
+
 // setupFlush sets up background go routine to periodically flush data.
 func (q *MmapQueue) periodicFlush() {
 	defer q.wg.Done()
