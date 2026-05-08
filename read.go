@@ -162,7 +162,7 @@ func (q *MmapQueue) readLength(aid, offset int) (int, int, int, error) {
 	}
 
 	// read length
-	aa, err := q.am.getArena(aid)
+	aa, err := q.am.loadOrGetArena(aid)
 	if err != nil {
 		return 0, 0, 0, err
 	}
@@ -182,7 +182,7 @@ func (q *MmapQueue) readLength(aid, offset int) (int, int, int, error) {
 func (q *MmapQueue) readBytes(r reader, aid, offset, length int) (int, int, error) {
 	counter := 0
 	for {
-		aa, err := q.am.getArena(aid)
+		aa, err := q.am.loadOrGetArena(aid)
 		if err != nil {
 			return 0, 0, err
 		}

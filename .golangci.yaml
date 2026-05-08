@@ -1,6 +1,5 @@
-version: "2"
 linters:
-  default: none
+  disable-all: true
   enable:
     - asasalint
     - asciicheck
@@ -43,21 +42,6 @@ linters:
     - inamedparam
     - ineffassign
     - interfacebloat
-    - intrange
-    - ireturn
-    - lll
-    - loggercheck
-    # - maintidx
-    - makezero
-    - mirror
-    - misspell
-    - musttag
-    - nakedret
-    - nilerr
-    # - nilnesserr
-    - nilnil
-    - nolintlint
-    - nonamedreturns
     - nosprintfhostport
     - paralleltest
     - perfsprint
@@ -85,21 +69,24 @@ linters:
     # - usetesting
     - wastedassign
     - zerologlint
-  settings:
-    lll:
-      line-length: 120
+
+linters-settings:
+  lll:
+    line-length: 120
 
 issues:
   exclude-rules:
     - path: "_test\\.go$"
       linters:
-        - "*"
+        - errcheck
+        - paralleltest
+        - gocritic
+        - unconvert
+        - intrange
+    - path: "arenamanager_test.go"
+      linters:
+        - lll
   exclude-dirs:
     - third_party
     - builtin
     - examples
-
-formatters:
-  enable:
-    - gofmt
-    - goimports

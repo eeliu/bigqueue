@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestSetArenaPath(t *testing.T) {
+func TestGetArenaPath(t *testing.T) {
 	am := &arenaManager{
 		dir: "/tmp/testqueue",
 	}
@@ -19,7 +19,7 @@ func TestSetArenaPath(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		pathResult := am.setArenaPath(tc.aid)
+		pathResult := am.getArenaPath(tc.aid)
 		if pathResult != tc.expected {
 			t.Errorf("expected %s, got %s", tc.expected, pathResult)
 		}
@@ -28,21 +28,21 @@ func TestSetArenaPath(t *testing.T) {
 	// Test with a different directory
 	am.dir = "relative/path"
 	expected := "relative/path/10_arena.dat"
-	if res := am.setArenaPath(10); res != expected {
+	if res := am.getArenaPath(10); res != expected {
 		t.Errorf("expected %s, got %s", expected, res)
 	}
 }
 
-func TestSetArenaPath_Reuse(t *testing.T) {
+func TestGetArenaPath_Reuse(t *testing.T) {
 	am := &arenaManager{
 		dir: "/tmp",
 	}
 
 	// First call
-	p1 := am.setArenaPath(1)
+	p1 := am.getArenaPath(1)
 
 	// Second call with larger ID to ensure slice growth/reuse doesn't corrupt previous logic
-	p2 := am.setArenaPath(1000000)
+	p2 := am.getArenaPath(1000000)
 
 	expected1 := "/tmp/1_arena.dat"
 	expected2 := "/tmp/1000000_arena.dat"

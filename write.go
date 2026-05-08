@@ -71,7 +71,7 @@ func (q *MmapQueue) writeLength(aid, offset int, length uint64) (int, int, error
 		aid, offset = aid+1, 0
 	}
 
-	aa, err := q.am.getArena(aid)
+	aa, err := q.am.loadOrGetArena(aid)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -90,7 +90,7 @@ func (q *MmapQueue) writeBytes(w writer, aid, offset int) (int, int, error) {
 	length := w.len()
 	counter := 0
 	for {
-		aa, err := q.am.getArena(aid)
+		aa, err := q.am.loadOrGetArena(aid)
 		if err != nil {
 			return 0, 0, err
 		}
