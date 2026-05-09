@@ -1721,7 +1721,7 @@ func TestEnqueueWithTagPersistence(t *testing.T) {
 // TestEnqueueWithTagRandomPayloads verifies that EnqueueWithTag and DequeueWithTag preserve
 // exact byte-for-byte data and FIFO order for a wide variety of payload types: random numeric
 // bytes, non-UTF-8 binary sequences, Chinese, Korean, and Japanese encoded text, mixed
-// multibyte payloads, and randomly chosen tag values — including multi-byte tags.
+// multibyte payloads, and randomly chosen tag values - including multi-byte tags.
 func TestEnqueueWithTagRandomPayloads(t *testing.T) {
 	t.Parallel()
 

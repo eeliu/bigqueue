@@ -14,7 +14,7 @@ func TestConcurrency_MapAccess(t *testing.T) {
 	os.MkdirAll(testDir, 0755)
 	defer os.RemoveAll(testDir)
 
-	// 设置内存限制和 GC 阈值以增加 gc() 和 ensureEnoughMem 触发频率
+	// Set memory limit and GC threshold to increase frequency of gc() and ensureEnoughMem triggers
 	bq, err := NewMmapQueue(testDir, SetArenaSize(4096), SetMaxInMemArenas(3), SetMaxArenasToKeep(2))
 	if err != nil {
 		t.Fatalf("failed to create bigqueue: %v", err)
@@ -24,7 +24,7 @@ func TestConcurrency_MapAccess(t *testing.T) {
 	var wg sync.WaitGroup
 	numOps := 200
 
-	// 启动多个协程同时进行 Enqueue, Dequeue 和 GC
+	// Start multiple goroutines for concurrent Enqueue, Dequeue and GC
 	wg.Add(3)
 
 	// Writer

@@ -37,7 +37,7 @@ func main() {
 		}
 	}
 
-	// Dequeue and route messages by tag — no payload parsing needed.
+	// Dequeue and route messages by tag - no payload parsing needed.
 	for !bq.IsEmpty() {
 		payload, tag, err := bq.DequeueWithTag()
 		if err != nil {
