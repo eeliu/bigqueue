@@ -22,6 +22,8 @@ var (
 	ErrTooSmallArenaSize = errors.New("too small arena size")
 	// ErrTooFewInMemArenas is returned when number of arenas allowed in memory < 3.
 	ErrTooFewInMemArenas = errors.New("too few in memory arenas")
+	// ErrNegativeMaxArenasToKeep is returned when max arenas to keep is negative.
+	ErrNegativeMaxArenasToKeep = errors.New("max arenas to keep cannot be negative")
 )
 
 // bqConfig stores all the configuration related to bigqueue.
@@ -114,6 +116,9 @@ func SetPeriodicFlushDuration(flushPeriod time.Duration) Option {
 // will be deleted. If maxArenasToKeep is 0 (default), no arena files are deleted.
 func SetMaxArenasToKeep(maxArenasToKeep int) Option {
 	return func(c *bqConfig) error {
+		if maxArenasToKeep < 0 {
+			return ErrNegativeMaxArenasToKeep
+		}
 		c.maxArenasToKeep = maxArenasToKeep
 		return nil
 	}
