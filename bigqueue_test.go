@@ -579,6 +579,17 @@ func TestLimitedMemoryNoErr(t *testing.T) {
 	}
 }
 
+func TestSetMaxArenasToKeepNegativeErr(t *testing.T) {
+	t.Parallel()
+
+	testDir := t.TempDir()
+	arenaSize := os.Getpagesize() * 2
+	bq, err := NewMmapQueue(testDir, SetArenaSize(arenaSize), SetMaxArenasToKeep(-1))
+	if err != ErrNegativeMaxArenasToKeep || bq != nil {
+		t.Fatalf("expected max arenas to keep negative error, returned: %v", err)
+	}
+}
+
 func runTestLimitedMemory(t *testing.T, messageSize, arenaSize, maxInMemArenas int) {
 	t.Helper()
 
