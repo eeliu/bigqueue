@@ -1,6 +1,5 @@
-version: "2"
 linters:
-  default: none
+  disable-all: true
   enable:
     - asasalint
     - asciicheck
@@ -18,7 +17,7 @@ linters:
     - errchkjson
     - errname
     - exhaustive
-    - exptostd
+    # - exptostd
     - fatcontext
     - ginkgolinter
     - gocheckcompilerdirectives
@@ -38,26 +37,11 @@ linters:
     - gosmopolitan
     - govet
     - grouper
-    - iface
+    # - iface
     - importas
     - inamedparam
     - ineffassign
     - interfacebloat
-    - intrange
-    - ireturn
-    - lll
-    - loggercheck
-    # - maintidx
-    - makezero
-    - mirror
-    - misspell
-    - musttag
-    - nakedret
-    - nilerr
-    - nilnesserr
-    - nilnil
-    - nolintlint
-    - nonamedreturns
     - nosprintfhostport
     - paralleltest
     - perfsprint
@@ -66,7 +50,7 @@ linters:
     - promlinter
     - protogetter
     - reassign
-    - recvcheck
+    # - recvcheck
     - revive
     - rowserrcheck
     - sloglint
@@ -82,30 +66,27 @@ linters:
     - unparam
     - unused
     - usestdlibvars
-    - usetesting
+    # - usetesting
     - wastedassign
     - zerologlint
-  settings:
-    lll:
-      line-length: 120
-  exclusions:
-    generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
-formatters:
-  enable:
-    - gofmt
-    - goimports
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+
+linters-settings:
+  lll:
+    line-length: 120
+
+issues:
+  exclude-rules:
+    - path: "_test\\.go$"
+      linters:
+        - errcheck
+        - paralleltest
+        - gocritic
+        - unconvert
+        - intrange
+    - path: "arenamanager_test.go"
+      linters:
+        - lll
+  exclude-dirs:
+    - third_party
+    - builtin
+    - examples

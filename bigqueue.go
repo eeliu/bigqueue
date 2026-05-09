@@ -115,6 +115,14 @@ func NewMmapQueue(dir string, opts ...Option) (*MmapQueue, error) {
 	return bq, nil
 }
 
+// GC will trigger the garbage collection of the arena files.
+func (q *MmapQueue) GC() {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
+	q.am.gc()
+}
+
 // NewConsumer creates a new consumer or finds an existing one with same name.
 func (q *MmapQueue) NewConsumer(name string) (*Consumer, error) {
 	q.lock.Lock()

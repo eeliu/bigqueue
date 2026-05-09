@@ -579,6 +579,17 @@ func TestLimitedMemoryNoErr(t *testing.T) {
 	}
 }
 
+func TestSetMaxArenasToKeepNegativeErr(t *testing.T) {
+	t.Parallel()
+
+	testDir := t.TempDir()
+	arenaSize := os.Getpagesize() * 2
+	bq, err := NewMmapQueue(testDir, SetArenaSize(arenaSize), SetMaxArenasToKeep(-1))
+	if err != ErrNegativeMaxArenasToKeep || bq != nil {
+		t.Fatalf("expected max arenas to keep negative error, returned: %v", err)
+	}
+}
+
 func runTestLimitedMemory(t *testing.T, messageSize, arenaSize, maxInMemArenas int) {
 	t.Helper()
 
@@ -1710,7 +1721,7 @@ func TestEnqueueWithTagPersistence(t *testing.T) {
 // TestEnqueueWithTagRandomPayloads verifies that EnqueueWithTag and DequeueWithTag preserve
 // exact byte-for-byte data and FIFO order for a wide variety of payload types: random numeric
 // bytes, non-UTF-8 binary sequences, Chinese, Korean, and Japanese encoded text, mixed
-// multibyte payloads, and randomly chosen tag values — including multi-byte tags.
+// multibyte payloads, and randomly chosen tag values - including multi-byte tags.
 func TestEnqueueWithTagRandomPayloads(t *testing.T) {
 	t.Parallel()
 

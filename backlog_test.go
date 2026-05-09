@@ -48,9 +48,9 @@ func TestBacklogBytesEnqueueDequeue(t *testing.T) {
 
 	// Enqueue three messages with known payload sizes.
 	messages := [][]byte{
-		[]byte("hello"),      // 5 bytes payload → 8+5 = 13 bytes stored
-		[]byte("world!!!!!"), // 10 bytes payload → 8+10 = 18 bytes stored
-		[]byte("go"),         // 2 bytes payload → 8+2 = 10 bytes stored
+		[]byte("hello"),      // 5 bytes payload -> 8+5 = 13 bytes stored
+		[]byte("world!!!!!"), // 10 bytes payload -> 8+10 = 18 bytes stored
+		[]byte("go"),         // 2 bytes payload -> 8+2 = 10 bytes stored
 	}
 
 	var expectedBacklog int64
@@ -307,9 +307,9 @@ func TestBacklogBytesStress(t *testing.T) {
 		var payloadLen int
 		switch i % 3 {
 		case 0:
-			payloadLen = rng.Intn(64) + 1 // 1–64 bytes
+			payloadLen = rng.Intn(64) + 1 // 1-64 bytes
 		case 1:
-			payloadLen = rng.Intn(arenaSize/4) + 1 // 1–arenaSize/4 bytes
+			payloadLen = rng.Intn(arenaSize/4) + 1 // 1-(arenaSize/4) bytes
 		case 2:
 			payloadLen = arenaSize - cInt64Size - 1 // just under a full arena
 		}
