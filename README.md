@@ -9,7 +9,9 @@ memory mapped (`mmap`) files. `bigqueue` is now *thread safe* as well.
 
 ## Installation
 ```
-go get github.com/grandecola/bigqueue
+#go get github.com/grandecola/bigqueue origin
+
+replace github.com/grandecola/bigqueue v0.6.0 => github.com/eeliu/bigqueue v0.2.0
 ```
 
 ## Requirements
@@ -38,11 +40,14 @@ Bigqueue also allows setting up the maximum possible memory that it
 can use. By default, the maximum memory is set to [3 x Arena Size].
 ```go
 bq, err := bigqueue.NewQueue("path/to/queue", bigqueue.SetArenaSize(4*1024),
-	    bigqueue.SetMaxInMemArenas(10))
+	    bigqueue.SetMaxInMemArenas(10), bigqueue.SetMaxArenasToKeep(20))
 defer bq.Close()
 ```
 In this case, bigqueue will never allocate more memory than `4KB*10=40KB`. This
-memory is above and beyond the memory used in buffers for copying data.
+memory is above and beyond the memory used in buffers for copying data. 
+The `SetMaxArenasToKeep(20)` option tells bigqueue to retain at most 20 old 
+arena files on disk after they have been consumed; any older ones will 
+be automatically deleted.
 
 Bigqueue allows to set periodic flush based on either elapsed time or number
 of mutate (enqueue/dequeue) operations. Flush syncs the in memory changes of all
@@ -58,6 +63,14 @@ In this case, a flush is done after every two mutate operations.
 bq, err := bigqueue.NewQueue("path/to/queue", bigqueue.SetPeriodicFlushDuration(time.Minute))
 ```
 In this case, a flush is done after one minute elapses and an Enqueue/Dequeue is called.
+
+### Garbage Collection
+By default, bigqueue automatically cleans up old arena files that have been 
+consumed by **all** consumers (based on the `SetMaxArenasToKeep` setting). 
+You can also manually trigger a garbage collection:
+```go
+bq.GC()
+```
 
 Write to bigqueue:
 ```go
@@ -82,6 +95,12 @@ elem, err := bq.DequeueString()
 Check whether bigqueue has non zero elements:
 ```go
 isEmpty := bq.IsEmpty()
+```
+
+Check the number of bytes waiting to be consumed:
+```go
+// Returns total bytes including length headers from current head to tail
+backlog, err := bq.BacklogBytes()
 ```
 
 ### Tagged Messages API
