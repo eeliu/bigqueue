@@ -1,0 +1,35 @@
+# Codecov configuration
+# For more info: https://docs.codecov.com/docs/codecovyml-reference
+
+codecov:
+  branch: dev
+
+coverage:
+  status:
+    project:
+      default:
+        # Minimum overall coverage to pass
+        target: auto
+        threshold: 1%     # Allow 1% drop
+    patch:
+      default:
+        # Ensure new code is covered
+        target: 50%       # New code should have at least 50% coverage
+        threshold: 0%
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no
+
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default
+  require_changes: no  # If false, always post a comment
+
+ignore:
+  - "examples/**/*"     # Ignore examples in coverage
+  - "**/*_test.go"     # Ignore test files themselves
