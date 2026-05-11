@@ -39,7 +39,7 @@ defer bq.Close()
 Bigqueue also allows setting up the maximum possible memory that it
 can use. By default, the maximum memory is set to [3 x Arena Size].
 ```go
-bq, err := bigqueue.NewQueue("path/to/queue", bigqueue.SetArenaSize(4*1024),
+bq, err := bigqueue.NewMmapQueue("path/to/queue", bigqueue.SetArenaSize(4*1024),
 	    bigqueue.SetMaxInMemArenas(10), bigqueue.SetMaxArenasToKeep(20))
 defer bq.Close()
 ```
@@ -55,12 +55,12 @@ memory mapped files with disk. *This is a best effort flush*.
 
 This is how we can set these options:
 ```go
-bq, err := bigqueue.NewQueue("path/to/queue", bigqueue.SetPeriodicFlushOps(2))
+bq, err := bigqueue.NewMmapQueue("path/to/queue", bigqueue.SetPeriodicFlushOps(2))
 ```
 In this case, a flush is done after every two mutate operations.
 
 ```go
-bq, err := bigqueue.NewQueue("path/to/queue", bigqueue.SetPeriodicFlushDuration(time.Minute))
+bq, err := bigqueue.NewMmapQueue("path/to/queue", bigqueue.SetPeriodicFlushDuration(time.Minute))
 ```
 In this case, a flush is done after one minute elapses and an Enqueue/Dequeue is called.
 
