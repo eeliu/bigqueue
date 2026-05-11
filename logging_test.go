@@ -10,12 +10,7 @@ import (
 )
 
 func TestLoggingIntegration(t *testing.T) {
-	testDir := os.TempDir() + "/bq-log-test"
-	os.RemoveAll(testDir)
-	if err := os.MkdirAll(testDir, 0755); err != nil {
-		t.Fatalf("failed to create test dir: %v", err)
-	}
-	defer os.RemoveAll(testDir)
+	testDir := t.TempDir()
 
 	var buf bytes.Buffer
 	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{
