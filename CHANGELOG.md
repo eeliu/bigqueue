@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.2.1] - 2026-05-11
+
+### Added
+- Added structured logging support using `log/slog` (Standard Library).
+- Added `SetLogger` Option to configure a custom `slog.Logger`.
+- Implemented logging wrappers (`Debug`, `Info`, `Warn`, `Error`) in `bqConfig`.
+- Added detailed internal logging to `arenaManager` for better observability of initialization, garbage collection, and memory management.
+
 ## [v0.2.0] - 2026-05-08
 
 ### Added
