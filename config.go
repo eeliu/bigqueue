@@ -2,6 +2,7 @@ package bigqueue
 
 import (
 	"errors"
+	"log/slog"
 	"os"
 	"time"
 )
@@ -28,11 +29,12 @@ var (
 
 // bqConfig stores all the configuration related to bigqueue.
 type bqConfig struct {
-	arenaSize        int
-	maxInMemArenas   int
-	maxArenasToKeep  int
-	flushMutOps      int64
-	flushPeriod      time.Duration
+	arenaSize       int
+	maxInMemArenas  int
+	maxArenasToKeep int
+	flushMutOps     int64
+	flushPeriod     time.Duration
+	logger          *slog.Logger
 }
 
 // Option is function type that takes a bqConfig object
@@ -47,6 +49,7 @@ func newConfig() *bqConfig {
 		maxArenasToKeep: 0,
 		flushMutOps:     cDefaultMutOps,
 		flushPeriod:     cDefaultflushPeriod,
+		logger:          nil,
 	}
 }
 
@@ -121,5 +124,44 @@ func SetMaxArenasToKeep(maxArenasToKeep int) Option {
 		}
 		c.maxArenasToKeep = maxArenasToKeep
 		return nil
+	}
+}
+
+// SetLogger returns an Option that sets the logger for bigqueue.
+func SetLogger(logger *slog.Logger) Option {
+	return func(c *bqConfig) error {
+		if logger != nil {
+			logger = logger.With("module", "bigqueue")
+			c.logger = logger
+		}
+		return nil
+	}
+}
+
+// Debug logs a debug message using the configured logger.
+func (c *bqConfig) Debug(msg string, args ...any) {
+	if c.logger != nil {
+		c.logger.Debug(msg, args...)
+	}
+}
+
+// Info logs an info message using the configured logger.
+func (c *bqConfig) Info(msg string, args ...any) {
+	if c.logger != nil {
+		c.logger.Info(msg, args...)
+	}
+}
+
+// Warn logs a warning message using the configured logger.
+func (c *bqConfig) Warn(msg string, args ...any) {
+	if c.logger != nil {
+		c.logger.Warn(msg, args...)
+	}
+}
+
+// Error logs an error message using the configured logger.
+func (c *bqConfig) Error(msg string, args ...any) {
+	if c.logger != nil {
+		c.logger.Error(msg, args...)
 	}
 }

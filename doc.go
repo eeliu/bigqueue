@@ -5,21 +5,39 @@
 //
 // Create or open a bigqueue:
 //
-//	bq, err := bigqueue.NewQueue("path/to/queue")
+//	bq, err := bigqueue.NewMmapQueue("path/to/queue")
 //	defer bq.Close()
 //
 // bigqueue persists the data of the queue in multiple Arenas.
 // Each Arena is a file on disk that is mapped into memory (RAM)
 // using mmap syscall. Default size of each Arena is set to 128MB.
+// v0.2.0 added structured logging support via log/slog,
+// manual and automatic Garbage Collection (GC) for arena files,
+// and BacklogBytes() to calculate pending data size.
+//
 // It is possible to create a bigqueue with custom Arena size:
 //
-//	bq, err := bigqueue.NewQueue("path/to/queue", bigqueue.SetArenaSize(4*1024))
+//	bq, err := bigqueue.NewMmapQueue("path/to/queue", bigqueue.SetArenaSize(4*1024))
 //	defer bq.Close()
+//
+// bigqueue also supports structured logging:
+//
+//	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+//	bq, err := bigqueue.NewMmapQueue("path/to/queue", bigqueue.SetLogger(logger))
+//
+// Garbage Collection (GC) can be configured to automatically delete
+// arena files that have been fully consumed:
+//
+//	bq, err := bigqueue.NewMmapQueue("path/to/queue", bigqueue.SetMaxArenasToKeep(10))
+//
+// Or triggered manually:
+//
+//	bq.GC()
 //
 // bigqueue also allows setting up the maximum possible memory that it
 // can use. By default, the maximum memory is set to [3 x Arena Size].
 //
-//	 bq, err := bigqueue.NewQueue("path/to/queue", bigqueue.SetArenaSize(4*1024),
+//	 bq, err := bigqueue.NewMmapQueue("path/to/queue", bigqueue.SetArenaSize(4*1024),
 //		     bigqueue.SetMaxInMemArenas(10))
 //	 defer bq.Close()
 //
