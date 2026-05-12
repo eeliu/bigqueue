@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.2.2] - 2026-05-12
+
+### Changed
+- Refactored `Logger` interface to use formatted logging methods (`Debugf`, `Infof`, `Warnf`, `Errorf`).
+- Updated internal logging to use the new formatted methods.
+
+### Added
+- Added Codecov configuration for coverage tracking.
+
 ## [v0.2.1] - 2026-05-11
 
 ### Added

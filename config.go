@@ -2,7 +2,6 @@ package bigqueue
 
 import (
 	"errors"
-	"log/slog"
 	"os"
 	"time"
 )
@@ -27,6 +26,15 @@ var (
 	ErrNegativeMaxArenasToKeep = errors.New("max arenas to keep cannot be negative")
 )
 
+// Logger is an interface that allows bigqueue to log messages.
+// It is designed to be compatible with slog.Logger and other logging libraries.
+type Logger interface {
+	Debugf(format string, args ...any)
+	Infof(format string, args ...any)
+	Warnf(format string, args ...any)
+	Errorf(format string, args ...any)
+}
+
 // bqConfig stores all the configuration related to bigqueue.
 type bqConfig struct {
 	arenaSize       int
@@ -34,7 +42,7 @@ type bqConfig struct {
 	maxArenasToKeep int
 	flushMutOps     int64
 	flushPeriod     time.Duration
-	logger          *slog.Logger
+	logger          Logger
 }
 
 // Option is function type that takes a bqConfig object
@@ -128,40 +136,39 @@ func SetMaxArenasToKeep(maxArenasToKeep int) Option {
 }
 
 // SetLogger returns an Option that sets the logger for bigqueue.
-func SetLogger(logger *slog.Logger) Option {
+func SetLogger(logger Logger) Option {
 	return func(c *bqConfig) error {
 		if logger != nil {
-			logger = logger.With("module", "bigqueue")
 			c.logger = logger
 		}
 		return nil
 	}
 }
 
-// Debug logs a debug message using the configured logger.
-func (c *bqConfig) Debug(msg string, args ...any) {
+// Debugf logs a debug message using the configured logger.
+func (c *bqConfig) Debugf(format string, args ...any) {
 	if c.logger != nil {
-		c.logger.Debug(msg, args...)
+		c.logger.Debugf("[queue] "+format, args...)
 	}
 }
 
-// Info logs an info message using the configured logger.
-func (c *bqConfig) Info(msg string, args ...any) {
+// Infof logs an info message using the configured logger.
+func (c *bqConfig) Infof(format string, args ...any) {
 	if c.logger != nil {
-		c.logger.Info(msg, args...)
+		c.logger.Infof("[queue] "+format, args...)
 	}
 }
 
-// Warn logs a warning message using the configured logger.
-func (c *bqConfig) Warn(msg string, args ...any) {
+// Warnf logs a warning message using the configured logger.
+func (c *bqConfig) Warnf(format string, args ...any) {
 	if c.logger != nil {
-		c.logger.Warn(msg, args...)
+		c.logger.Warnf("[queue] "+format, args...)
 	}
 }
 
-// Error logs an error message using the configured logger.
-func (c *bqConfig) Error(msg string, args ...any) {
+// Errorf logs an error message using the configured logger.
+func (c *bqConfig) Errorf(format string, args ...any) {
 	if c.logger != nil {
-		c.logger.Error(msg, args...)
+		c.logger.Errorf("[queue] "+format, args...)
 	}
 }

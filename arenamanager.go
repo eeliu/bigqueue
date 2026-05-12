@@ -33,11 +33,11 @@ func newArenaManager(dir string, conf *bqConfig, md *metadata) (*arenaManager, e
 		arenas: make(map[int]*mmap.File),
 	}
 
-	conf.Info("initializing arena manager", "dir", am.dir, "tail_aid", tailAid)
+	conf.Infof("initializing arena manager; dir=%s, tail_aid=%d", am.dir, tailAid)
 
 	// we load the tail arena into memory
 	if err := am.loadArena(tailAid); err != nil {
-		conf.Error("failed to load tail arena", "aid", tailAid, "error", err)
+		conf.Errorf("failed to load tail arena; aid=%d, error=%v", tailAid, err)
 		return nil, err
 	}
 
@@ -78,7 +78,7 @@ func (m *arenaManager) gc() {
 		return
 	}
 
-	m.conf.Info("garbage collection started", "min_head_aid", minHeadAid, "limit_aid", limitAid)
+	m.conf.Infof("garbage collection started; min_head_aid=%d, limit_aid=%d", minHeadAid, limitAid)
 
 	// startAid - we can delete from 0 up to limitAid-1.
 	for aid := 0; aid < limitAid; aid++ {
@@ -91,9 +91,9 @@ func (m *arenaManager) gc() {
 		arenaPath := m.getArenaPath(aid)
 		if _, err := os.Stat(arenaPath); err == nil {
 			if err := os.Remove(arenaPath); err != nil {
-				m.conf.Error("failed to delete arena file", "aid", aid, "path", arenaPath, "error", err)
+				m.conf.Errorf("failed to delete arena file; aid=%d, path=%s, error=%v", aid, arenaPath, err)
 			} else {
-				m.conf.Info("arena file deleted", "aid", aid, "path", arenaPath)
+				m.conf.Infof("arena file deleted; aid=%d, path=%s", aid, arenaPath)
 			}
 		}
 	}
@@ -111,7 +111,7 @@ func (m *arenaManager) loadOrGetArena(aid int) (*mmap.File, error) {
 		return aa, nil
 	}
 
-	m.conf.Debug("loading or creating arena", "aid", aid)
+	m.conf.Debugf("loading or creating arena; aid=%d", aid)
 
 	// if this is a new arena being requested (tail expansion)
 	// getTail doesn't help here because writer might be calling it before metadata update
@@ -122,13 +122,13 @@ func (m *arenaManager) loadOrGetArena(aid int) (*mmap.File, error) {
 	// before we get a new arena into memory, we need to ensure that after fetching
 	// a new arena into memory, we do not cross the provided memory limit.
 	if err := m.ensureEnoughMem(); err != nil {
-		m.conf.Error("failed to ensure enough memory for arena", "aid", aid, "error", err)
+		m.conf.Errorf("failed to ensure enough memory for arena; aid=%d, error=%v", aid, err)
 		return nil, err
 	}
 
 	// now, get arena into memory
 	if err := m.loadArena(aid); err != nil {
-		m.conf.Error("failed to load arena", "aid", aid, "error", err)
+		m.conf.Errorf("failed to load arena; aid=%d, error=%v", aid, err)
 		return nil, err
 	}
 
@@ -149,7 +149,7 @@ func (m *arenaManager) ensureEnoughMem() error {
 		return nil
 	}
 
-	m.conf.Info("memory limit reached, evicting arenas", "in_mem_arenas", m.inMem, "max_in_mem_arenas", m.conf.maxInMemArenas)
+	m.conf.Infof("memory limit reached, evicting arenas; in_mem_arenas=%d, max_in_mem_arenas=%d", m.inMem, m.conf.maxInMemArenas)
 
 	// Start evicting from the arena just before the last arena that we have.
 	// If message size > arena size, last arena may not always be the tail arena.
@@ -167,9 +167,9 @@ func (m *arenaManager) ensureEnoughMem() error {
 			continue
 		}
 
-		m.conf.Debug("evicting arena from memory", "aid", aid)
+		m.conf.Debugf("evicting arena from memory; aid=%d", aid)
 		if err := m.unloadArena(aid); err != nil {
-			m.conf.Error("failed to unload arena during eviction", "aid", aid, "error", err)
+			m.conf.Errorf("failed to unload arena during eviction; aid=%d, error=%v", aid, err)
 			return err
 		}
 	}
@@ -184,7 +184,7 @@ func (m *arenaManager) loadArena(aid int) error {
 	}
 
 	arenaPath := m.getArenaPath(aid)
-	m.conf.Debug("opening arena file", "aid", aid, "path", arenaPath)
+	m.conf.Debugf("opening arena file; aid=%d, path=%s", aid, arenaPath)
 	aa, err := newArena(arenaPath, m.conf.arenaSize)
 	if err != nil {
 		return err
@@ -202,7 +202,7 @@ func (m *arenaManager) unloadArena(aid int) error {
 		return nil
 	}
 
-	m.conf.Debug("unmapping arena", "aid", aid)
+	m.conf.Debugf("unmapping arena; aid=%d", aid)
 	if err := aa.Unmap(); err != nil {
 		return fmt.Errorf("error in unmap :: %w", err)
 	}
