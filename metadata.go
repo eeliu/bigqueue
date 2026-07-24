@@ -204,15 +204,15 @@ func (m *metadata) putConsumerLength(base int64, length int) {
 	m.aa.WriteUint64At(uint64(length), base)
 }
 
-// getConsumerHead reads the head position (aid+offset) for
-// the consumer stored at a given base offset in metadata file.
+// getConsumerHead returns a consumer's read cursor (arena ID and offset)
+// from the consumer record stored at the given metadata address.
 //
 //	 <-------------- consumer head AID -------------> <-------------- consumer head pos -------------->
 //	+-----------------------+------------------------+------------------------+------------------------+
 //	| byte base+8 - base+11 | byte base+12 - base+15 | byte base+16 - base+19 | byte base+20 - base+23 |
 //	+-----------------------+------------------------+------------------------+------------------------+
-func (m *metadata) getConsumerHead(base int64) (int, int) {
-	return int(m.aa.ReadUint64At(base + 8)), int(m.aa.ReadUint64At(base + 16))
+func (m *metadata) getConsumerHead(addr int64) (int, int) {
+	return int(m.aa.ReadUint64At(addr + 8)), int(m.aa.ReadUint64At(addr + 16))
 }
 
 // putConsumerHead writes the head position of the consumer into the metadata file.
@@ -262,6 +262,12 @@ func (m *metadata) getConsumer(name string) (int64, error) {
 	m.size = newsize
 	m.putConsumer(oldsize, name)
 	return oldsize, nil
+}
+
+// getConsumers returns a defensive copy of the in-memory consumer index,
+// mapping consumer name to its metadata address.
+func (m *metadata) getConsumers() map[string]int64 {
+	return m.co
 }
 
 // flush writes the memory state of the metadata arena on to disk.

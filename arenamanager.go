@@ -13,17 +13,27 @@ const (
 	cArenaFileSuffix = "_arena.dat"
 )
 
+// metadataProvider defines the interface for metadata operations needed by arenaManager.
+type metadataProvider interface {
+	getTail() (int, int)
+	getHead() (int, int)
+	putHead(aid, off int)
+	flush() error
+	getConsumerHead(addr int64) (int, int)
+	getConsumers() map[string]int64
+}
+
 // arenaManager manages all the arenas for a bigqueue
 type arenaManager struct {
 	dir    string
 	conf   *bqConfig
-	md     *metadata
+	md     metadataProvider
 	arenas map[int]*mmap.File
 	inMem  int
 }
 
 // newArenaManager returns a pointer to new arenaManager.
-func newArenaManager(dir string, conf *bqConfig, md *metadata) (*arenaManager, error) {
+func newArenaManager(dir string, conf *bqConfig, md metadataProvider) (*arenaManager, error) {
 	tailAid, _ := md.getTail()
 
 	am := &arenaManager{
@@ -54,8 +64,8 @@ func (m *arenaManager) gc() {
 
 	// find the minimum consumer head aid
 	minHeadAid, minHeadOff := -1, -1
-	for _, base := range m.md.co {
-		aid, off := m.md.getConsumerHead(base)
+	for _, addr := range m.md.getConsumers() {
+		aid, off := m.md.getConsumerHead(addr)
 		if minHeadAid == -1 || aid < minHeadAid || (aid == minHeadAid && off < minHeadOff) {
 			minHeadAid = aid
 			minHeadOff = off
