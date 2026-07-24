@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.2.3] - 2026-07-24
+- handle Flush syscall failure
+
 ## [v0.2.2] - 2026-05-12
 
 ### Changed
