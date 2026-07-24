@@ -13,3 +13,22 @@
   "remoteUser": "ubuntu",
   "postCreateCommand": "go version"
 }
+
+{
+  "name": "bigqueue-go-1.25",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "golang.go"
+      ]
+    }
+  },
+  "remoteUser": "ubuntu",
+  "postCreateCommand": "go version"
+}
