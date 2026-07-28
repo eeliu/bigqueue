@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -21,18 +22,23 @@ func TestNewArenaNoDir(t *testing.T) {
 func TestNewArenaNoReadPerm(t *testing.T) {
 	t.Parallel()
 
-	fileName := path.Join(os.TempDir(), fmt.Sprintf("%d-temp.dat", time.Now().UnixNano()))
-	defer func() {
-		if err := os.Remove(fileName); err != nil {
-			t.Fatalf("error in deleting file: %v :: %v", fileName, err)
-		}
-	}()
-
-	if _, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, 000); err != nil {
-		t.Fatalf("unable to create file :: %v", err)
+	if os.Geteuid() == 0 {
+		t.Skip("permission checks are not reliable when running as root")
 	}
 
-	aa, err := newArena("/temp.dat", 100)
+	fileName := filepath.Join(t.TempDir(), "temp.dat")
+	fd, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, cFilePerm)
+	if err != nil {
+		t.Fatalf("unable to create file :: %v", err)
+	}
+	if err := fd.Close(); err != nil {
+		t.Fatalf("unable to close file :: %v", err)
+	}
+	if err := os.Chmod(fileName, 0); err != nil {
+		t.Fatalf("unable to update file permissions :: %v", err)
+	}
+
+	aa, err := newArena(fileName, 100)
 	if aa != nil || err == nil || !os.IsPermission(errors.Unwrap(err)) {
 		t.Fatalf("unexpected return for newArena :: %v", err)
 	}
