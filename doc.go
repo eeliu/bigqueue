@@ -14,11 +14,12 @@
 // Garbage Collection (GC) can be configured to automatically delete
 // arena files that have been fully consumed:
 //
-//     bq, err := bigqueue.NewMmapQueue("path/to/queue", bigqueue.SetMaxArenasToKeep(10))
+//	bq, err := bigqueue.NewMmapQueue("path/to/queue", bigqueue.SetMaxArenasToKeep(10))
 //
 // Or triggered manually:
 //
-//     bq.GC()
+//	bq.GC()
+//
 // It is possible to create a bigqueue with custom Arena size:
 //
 //	bq, err := bigqueue.NewMmapQueue("path/to/queue", bigqueue.SetArenaSize(4*1024))

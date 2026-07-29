@@ -17,7 +17,15 @@ type benchParam struct {
 	maxInMemArenaString string
 }
 
-//nolint:goconst // size labels are clearer inline in the table than as named constants
+const (
+	benchSize4KB   = "4KB"
+	benchSize128B  = "128B"
+	benchSize128KB = "128KB"
+	benchSize4MB   = "4MB"
+	benchSize128MB = "128MB"
+	benchNoLimit   = "NoLimit"
+)
+
 func getBenchParams() []benchParam {
 	messageBase := "abcdefghijlkmnopqrstuvwxyzABCDEF"
 	// message 128 bytes
@@ -31,21 +39,21 @@ func getBenchParams() []benchParam {
 
 	baseArenaSize := 4 * 1024
 	benchParams := []benchParam{
-		{baseArenaSize, "4KB", messageBytes, "128B", 3, "12KB"},
-		{baseArenaSize, "4KB", messageBytes, "128B", 10, "40KB"},
-		{baseArenaSize, "4KB", messageBytes, "128B", 0, "NoLimit"},
+		{baseArenaSize, benchSize4KB, messageBytes, benchSize128B, 3, "12KB"},
+		{baseArenaSize, benchSize4KB, messageBytes, benchSize128B, 10, "40KB"},
+		{baseArenaSize, benchSize4KB, messageBytes, benchSize128B, 0, benchNoLimit},
 
-		{32 * baseArenaSize, "128KB", message4KB, "4KB", 3, "384KB"},
-		{32 * baseArenaSize, "128KB", message4KB, "4KB", 10, "1.25MB"},
-		{32 * baseArenaSize, "128KB", message4KB, "4KB", 0, "NoLimit"},
+		{32 * baseArenaSize, benchSize128KB, message4KB, benchSize4KB, 3, "384KB"},
+		{32 * baseArenaSize, benchSize128KB, message4KB, benchSize4KB, 10, "1.25MB"},
+		{32 * baseArenaSize, benchSize128KB, message4KB, benchSize4KB, 0, benchNoLimit},
 
-		{1024 * baseArenaSize, "4MB", message128KB, "128KB", 3, "12MB"},
-		{1024 * baseArenaSize, "4MB", message128KB, "128KB", 10, "40MB"},
-		{1024 * baseArenaSize, "4MB", message128KB, "128KB", 0, "NoLimit"},
+		{1024 * baseArenaSize, benchSize4MB, message128KB, benchSize128KB, 3, "12MB"},
+		{1024 * baseArenaSize, benchSize4MB, message128KB, benchSize128KB, 10, "40MB"},
+		{1024 * baseArenaSize, benchSize4MB, message128KB, benchSize128KB, 0, benchNoLimit},
 
-		{32 * 1024 * baseArenaSize, "128MB", message4MB, "4MB", 3, "256MB"},
-		{32 * 1024 * baseArenaSize, "128MB", message4MB, "4MB", 10, "1.25GB"},
-		{32 * 1024 * baseArenaSize, "128MB", message4MB, "4MB", 0, "NoLimit"},
+		{32 * 1024 * baseArenaSize, benchSize128MB, message4MB, benchSize4MB, 3, "256MB"},
+		{32 * 1024 * baseArenaSize, benchSize128MB, message4MB, benchSize4MB, 10, "1.25GB"},
+		{32 * 1024 * baseArenaSize, benchSize128MB, message4MB, benchSize4MB, 0, benchNoLimit},
 	}
 
 	return benchParams

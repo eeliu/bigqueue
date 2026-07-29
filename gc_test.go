@@ -8,8 +8,12 @@ import (
 )
 
 func TestArenaGC(t *testing.T) {
+	t.Parallel()
+
 	testDir := filepath.Join(os.TempDir(), "test_bigqueue_gc")
-	os.RemoveAll(testDir)
+	if err := os.RemoveAll(testDir); err != nil {
+		t.Fatalf("failed to remove test dir: %v", err)
+	}
 	if err := os.MkdirAll(testDir, 0755); err != nil {
 		t.Fatalf("failed to create test dir: %v", err)
 	}
@@ -25,7 +29,7 @@ func TestArenaGC(t *testing.T) {
 
 	// 1. Fill several arenas
 	msg := make([]byte, 1024)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		if err := bq.Enqueue(msg); err != nil {
 			t.Fatalf("failed to enqueue: %v", i)
 		}
@@ -38,7 +42,7 @@ func TestArenaGC(t *testing.T) {
 
 	// 2. Consume to advance head
 	consumer, _ := bq.NewConsumer("__default__")
-	for i := 0; i < 8; i++ {
+	for range 8 {
 		_, err := consumer.Dequeue()
 		if err != nil {
 			t.Fatalf("failed to dequeue: %v", err)
@@ -62,7 +66,7 @@ func TestArenaGC(t *testing.T) {
 	limitAid := headAid - maxKeep
 
 	// Arenas < limitAid should be deleted.
-	for i := 0; i < limitAid; i++ {
+	for i := range limitAid {
 		path := filepath.Join(testDir, fmt.Sprintf("%d_arena.dat", i))
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
 			t.Errorf("arena %d should have been deleted (headAid=%d, limitAid=%d)", i, headAid, limitAid)
@@ -79,9 +83,15 @@ func TestArenaGC(t *testing.T) {
 }
 
 func TestArenaGC_MultipleArenasAndGC(t *testing.T) {
+	t.Parallel()
+
 	testDir := filepath.Join(os.TempDir(), "test_bigqueue_gc_multi_arenas")
-	os.RemoveAll(testDir)
-	os.MkdirAll(testDir, 0755)
+	if err := os.RemoveAll(testDir); err != nil {
+		t.Fatalf("failed to remove test dir: %v", err)
+	}
+	if err := os.MkdirAll(testDir, 0755); err != nil {
+		t.Fatalf("failed to create test dir: %v", err)
+	}
 	defer os.RemoveAll(testDir)
 
 	arenaSize := 4096 // OS Page size (minimum allowed)
@@ -96,7 +106,7 @@ func TestArenaGC_MultipleArenasAndGC(t *testing.T) {
 	// 4096 byte arena. Message size will be half-ish to ensure split.
 	msg := make([]byte, 2000)
 	// 2000 + 8 = 2008 bytes. 2 messages per arena.
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		if err := bq.Enqueue(msg); err != nil {
 			t.Fatalf("failed to enqueue msg %d: %v", i, err)
 		}
@@ -111,12 +121,14 @@ func TestArenaGC_MultipleArenasAndGC(t *testing.T) {
 	// 2. Consume some messages to move the head of the default consumer.
 	// Move it to arena 6.
 	c, _ := bq.NewConsumer("__default__")
-	for i := 0; i < 14; i++ { // 14 msgs = 7 arenas approx
+	for i := range 14 { // 14 msgs = 7 arenas approx
 		if _, err := c.Dequeue(); err != nil {
 			t.Fatalf("failed to dequeue msg %d: %v", i, err)
 		}
 	}
-	bq.Flush()
+	if err := bq.Flush(); err != nil {
+		t.Fatalf("failed to flush: %v", err)
+	}
 
 	headAid, _ := bq.md.getConsumerHead(c.base)
 	if headAid < 6 {
@@ -129,7 +141,7 @@ func TestArenaGC_MultipleArenasAndGC(t *testing.T) {
 
 	// 4. Verify deletions
 	limitAid := headAid - maxKeep
-	for i := 0; i < limitAid; i++ {
+	for i := range limitAid {
 		path := filepath.Join(testDir, fmt.Sprintf("%d_arena.dat", i))
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
 			t.Errorf("arena %d should have been deleted", i)
@@ -137,7 +149,7 @@ func TestArenaGC_MultipleArenasAndGC(t *testing.T) {
 	}
 
 	// 5. Verify survivors
-	for i := limitAid; i <= int(tailAid); i++ {
+	for i := limitAid; i <= tailAid; i++ {
 		path := filepath.Join(testDir, fmt.Sprintf("%d_arena.dat", i))
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			t.Errorf("arena %d should still exist", i)
@@ -186,9 +198,15 @@ func TestArenaGC_MultipleArenasAndGC(t *testing.T) {
 }
 
 func TestArenaGC_MultipleConsumers(t *testing.T) {
+	t.Parallel()
+
 	testDir := filepath.Join(os.TempDir(), "test_bigqueue_gc_multi")
-	os.RemoveAll(testDir)
-	os.MkdirAll(testDir, 0755)
+	if err := os.RemoveAll(testDir); err != nil {
+		t.Fatalf("failed to remove test dir: %v", err)
+	}
+	if err := os.MkdirAll(testDir, 0755); err != nil {
+		t.Fatalf("failed to create test dir: %v", err)
+	}
 	defer os.RemoveAll(testDir)
 
 	arenaSize := 4096
@@ -200,21 +218,29 @@ func TestArenaGC_MultipleConsumers(t *testing.T) {
 	}
 
 	msg := make([]byte, 1024)
-	for i := 0; i < 20; i++ {
-		bq.Enqueue(msg)
+	for range 20 {
+		if err := bq.Enqueue(msg); err != nil {
+			t.Fatalf("failed to enqueue: %v", err)
+		}
 	}
 
 	c1, _ := bq.NewConsumer("c1")
 	c2, _ := bq.NewConsumer("c2")
 
-	for i := 0; i < 10; i++ {
-		c1.Dequeue()
+	for range 10 {
+		if _, err := c1.Dequeue(); err != nil {
+			t.Fatalf("failed to dequeue from c1: %v", err)
+		}
 	}
-	for i := 0; i < 4; i++ {
-		c2.Dequeue()
+	for range 4 {
+		if _, err := c2.Dequeue(); err != nil {
+			t.Fatalf("failed to dequeue from c2: %v", err)
+		}
 	}
 
-	bq.Flush()
+	if err := bq.Flush(); err != nil {
+		t.Fatalf("failed to flush: %v", err)
+	}
 
 	head1, _ := bq.md.getConsumerHead(c1.base)
 	head2, _ := bq.md.getConsumerHead(c2.base)
@@ -225,12 +251,14 @@ func TestArenaGC_MultipleConsumers(t *testing.T) {
 	}
 
 	// Trigger GC via new arena
-	for i := 0; i < 10; i++ {
-		bq.Enqueue(msg)
+	for range 10 {
+		if err := bq.Enqueue(msg); err != nil {
+			t.Fatalf("failed to enqueue: %v", err)
+		}
 	}
 
 	limitAid := minHead - maxKeep
-	for i := 0; i < limitAid; i++ {
+	for i := range limitAid {
 		path := filepath.Join(testDir, fmt.Sprintf("%d_arena.dat", i))
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
 			t.Errorf("arena %d should have been deleted (head1=%d, head2=%d)", i, head1, head2)
@@ -245,9 +273,15 @@ func TestArenaGC_MultipleConsumers(t *testing.T) {
 	bq.Close()
 }
 func TestArenaGC_NewConsumerAfterGC(t *testing.T) {
+	t.Parallel()
+
 	testDir := filepath.Join(os.TempDir(), "test_bigqueue_gc_new_consumer")
-	os.RemoveAll(testDir)
-	os.MkdirAll(testDir, 0755)
+	if err := os.RemoveAll(testDir); err != nil {
+		t.Fatalf("failed to remove test dir: %v", err)
+	}
+	if err := os.MkdirAll(testDir, 0755); err != nil {
+		t.Fatalf("failed to create test dir: %v", err)
+	}
 	defer os.RemoveAll(testDir)
 
 	arenaSize := 4096
@@ -260,8 +294,10 @@ func TestArenaGC_NewConsumerAfterGC(t *testing.T) {
 
 	// 1. Fill 5 arenas
 	msg := make([]byte, 1024)
-	for i := 0; i < 15; i++ {
-		bq.Enqueue(msg)
+	for range 15 {
+		if err := bq.Enqueue(msg); err != nil {
+			t.Fatalf("failed to enqueue: %v", err)
+		}
 	}
 
 	// 2. Advance default consumer to arena 2 or more
@@ -269,10 +305,14 @@ func TestArenaGC_NewConsumerAfterGC(t *testing.T) {
 	// 4096 / (1024 + 8) = 3.96 -> 3 messages per arena.
 	// To reach arena 3, we need 3 * 3 = 9 messages.
 	// But let's just check what we get.
-	for i := 0; i < 12; i++ {
-		c.Dequeue()
+	for range 12 {
+		if _, err := c.Dequeue(); err != nil {
+			t.Fatalf("failed to dequeue: %v", err)
+		}
 	}
-	bq.Flush()
+	if err := bq.Flush(); err != nil {
+		t.Fatalf("failed to flush: %v", err)
+	}
 
 	headAid, headOff := bq.md.getConsumerHead(c.base)
 	if headAid < 2 {
@@ -296,9 +336,15 @@ func TestArenaGC_NewConsumerAfterGC(t *testing.T) {
 }
 
 func TestArenaGC_OffsetPrecision(t *testing.T) {
+	t.Parallel()
+
 	testDir := filepath.Join(os.TempDir(), "test_bigqueue_gc_offset")
-	os.RemoveAll(testDir)
-	os.MkdirAll(testDir, 0755)
+	if err := os.RemoveAll(testDir); err != nil {
+		t.Fatalf("failed to remove test dir: %v", err)
+	}
+	if err := os.MkdirAll(testDir, 0755); err != nil {
+		t.Fatalf("failed to create test dir: %v", err)
+	}
 	defer os.RemoveAll(testDir)
 
 	arenaSize := 4096
@@ -308,8 +354,10 @@ func TestArenaGC_OffsetPrecision(t *testing.T) {
 	}
 
 	msg := make([]byte, 100)
-	for i := 0; i < 5; i++ {
-		bq.Enqueue(msg)
+	for range 5 {
+		if err := bq.Enqueue(msg); err != nil {
+			t.Fatalf("failed to enqueue: %v", err)
+		}
 	}
 
 	c1, _ := bq.NewConsumer("c1")
@@ -318,13 +366,21 @@ func TestArenaGC_OffsetPrecision(t *testing.T) {
 	// c1 and c2 consume, but we MUST also advance the default consumer
 	// because GC considers all consumers.
 	dc, _ := bq.NewConsumer("__default__")
-	dc.Dequeue() // moves it to same as c1
+	if _, err := dc.Dequeue(); err != nil { // moves it to same as c1
+		t.Fatalf("failed to dequeue from default consumer: %v", err)
+	}
 
 	// c1 consumes 1 msg
-	c1.Dequeue()
+	if _, err := c1.Dequeue(); err != nil {
+		t.Fatalf("failed to dequeue from c1: %v", err)
+	}
 	// c2 consumes 2 msgs
-	c2.Dequeue()
-	c2.Dequeue()
+	if _, err := c2.Dequeue(); err != nil {
+		t.Fatalf("failed to dequeue from c2: %v", err)
+	}
+	if _, err := c2.Dequeue(); err != nil {
+		t.Fatalf("failed to dequeue from c2: %v", err)
+	}
 
 	// Both are in arena 0
 	aid1, off1 := bq.md.getConsumerHead(c1.base)

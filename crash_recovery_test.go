@@ -11,7 +11,9 @@ import (
 )
 
 // TestHelperCrashEnqueue is a helper process that constantly enqueues and then lets itself be killed.
-func TestHelperCrashEnqueue(_ *testing.T) {
+func TestHelperCrashEnqueue(t *testing.T) {
+	t.Parallel()
+
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
@@ -32,8 +34,12 @@ func TestHelperCrashEnqueue(_ *testing.T) {
 // A child process executes a real Enqueue operation continuously and is forcefully killed.
 // The parent process then checks if the queue file can be recovered without corruption.
 func TestCrashRecovery_Enqueue(t *testing.T) {
+	t.Parallel()
+
 	testDir := filepath.Join(t.TempDir(), "test_crash_enqueue_exec")
-	os.MkdirAll(testDir, 0755)
+	if err := os.MkdirAll(testDir, 0755); err != nil {
+		t.Fatalf("failed to create test dir: %v", err)
+	}
 
 	cmd := exec.Command(os.Args[0], "-test.run=TestHelperCrashEnqueue")
 	cmd.Env = append(os.Environ(), "GO_WANT_HELPER_PROCESS=1", "CRASH_TEST_DIR="+testDir)
@@ -75,7 +81,9 @@ func TestCrashRecovery_Enqueue(t *testing.T) {
 }
 
 // TestHelperCrashDequeue is a helper process that constantly dequeues.
-func TestHelperCrashDequeue(_ *testing.T) {
+func TestHelperCrashDequeue(t *testing.T) {
+	t.Parallel()
+
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
@@ -103,8 +111,12 @@ func TestHelperCrashDequeue(_ *testing.T) {
 // The parent process then checks if the unconsumed (or partially consumed but uncommitted)
 // messages can still be safely dequeued without loss.
 func TestCrashRecovery_Dequeue(t *testing.T) {
+	t.Parallel()
+
 	testDir := filepath.Join(t.TempDir(), "test_crash_dequeue_exec")
-	os.MkdirAll(testDir, 0755)
+	if err := os.MkdirAll(testDir, 0755); err != nil {
+		t.Fatalf("failed to create test dir: %v", err)
+	}
 
 	// Pre-fill the queue
 	bq, err := NewMmapQueue(testDir, SetArenaSize(4096))
@@ -113,7 +125,7 @@ func TestCrashRecovery_Dequeue(t *testing.T) {
 	}
 	msg := []byte("dequeue crash testing message data")
 	total := 1000
-	for i := 0; i < total; i++ {
+	for range total {
 		if err := bq.Enqueue(msg); err != nil {
 			t.Fatalf("failed to enqueue: %v", err)
 		}
@@ -160,8 +172,12 @@ func TestCrashRecovery_Dequeue(t *testing.T) {
 // We manually construct an inconsistent state (half-deleted arenas) and ensure the
 // queue can still open, be correctly cleaned up, and gracefully recover.
 func TestCrashRecovery_GC(t *testing.T) {
+	t.Parallel()
+
 	testDir := filepath.Join(t.TempDir(), "test_crash_gc_torn")
-	os.MkdirAll(testDir, 0755)
+	if err := os.MkdirAll(testDir, 0755); err != nil {
+		t.Fatalf("failed to create test dir: %v", err)
+	}
 
 	arenaSize := 4096
 	maxKeep := 0
@@ -173,7 +189,7 @@ func TestCrashRecovery_GC(t *testing.T) {
 	}
 
 	msg := make([]byte, 1000)
-	for i := 0; i < 20; i++ { // Creates ~5 arenas
+	for range 20 { // Creates ~5 arenas
 		if err := bq.Enqueue(msg); err != nil {
 			t.Fatalf("failed to enqueue: %v", err)
 		}
@@ -182,7 +198,7 @@ func TestCrashRecovery_GC(t *testing.T) {
 	// 2. Consume enough to advance head significantly.
 	// Since 1000 * 20 = 20k bytes, and arena is 4096,
 	// this should span about 5 arenas.
-	for i := 0; i < 18; i++ {
+	for range 18 {
 		if _, err := bq.Dequeue(); err != nil {
 			t.Fatalf("failed to dequeue: %v", err)
 		}
@@ -224,7 +240,7 @@ func TestCrashRecovery_GC(t *testing.T) {
 
 	// 5. Verify the remaining obsolete files are cleaned up gracefully.
 	// Note: We used maxKeep=0 for the recovery, so everything before globalHeadAid should be deleted.
-	for i := 0; i < globalHeadAid; i++ {
+	for i := range globalHeadAid {
 		path := filepath.Join(testDir, fmt.Sprintf("%d_arena.dat", i))
 		if _, err := os.Stat(path); err == nil {
 			t.Errorf("arena %d should have been deleted by recovery GC! (globalHeadAid=%d)", i, globalHeadAid)

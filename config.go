@@ -123,4 +123,3 @@ func SetMaxArenasToKeep(maxArenasToKeep int) Option {
 		return nil
 	}
 }
-

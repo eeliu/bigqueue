@@ -10,9 +10,15 @@ import (
 )
 
 func TestArenaGC_Concurrency(t *testing.T) {
+	t.Parallel()
+
 	testDir := filepath.Join(os.TempDir(), "test_bigqueue_gc_concurrency")
-	os.RemoveAll(testDir)
-	os.MkdirAll(testDir, 0755)
+	if err := os.RemoveAll(testDir); err != nil {
+		t.Fatalf("failed to remove test dir: %v", err)
+	}
+	if err := os.MkdirAll(testDir, 0755); err != nil {
+		t.Fatalf("failed to create test dir: %v", err)
+	}
 	defer os.RemoveAll(testDir)
 
 	// Configuration: Small arena to trigger expansion and GC frequently
@@ -34,12 +40,12 @@ func TestArenaGC_Concurrency(t *testing.T) {
 	startSignal := make(chan struct{})
 
 	// 1. Start Producers
-	for i := 0; i < numProducers; i++ {
+	for i := range numProducers {
 		wg.Add(1)
 		go func(pid int) {
 			defer wg.Done()
 			<-startSignal
-			for j := 0; j < msgsPerProducer; j++ {
+			for j := range msgsPerProducer {
 				msg := []byte(fmt.Sprintf("p%d-m%d", pid, j))
 				payload := make([]byte, msgSize)
 				copy(payload, msg)
@@ -54,7 +60,7 @@ func TestArenaGC_Concurrency(t *testing.T) {
 	// 2. Start Consumers
 	counts := make([]int, numConsumers)
 	var countMu sync.Mutex
-	for i := 0; i < numConsumers; i++ {
+	for i := range numConsumers {
 		wg.Add(1)
 		go func(cid int) {
 			defer wg.Done()
@@ -72,14 +78,15 @@ func TestArenaGC_Concurrency(t *testing.T) {
 			deadline := time.Now().Add(10 * time.Second)
 			for time.Now().Before(deadline) {
 				_, err := c.Dequeue()
-				if err == nil {
+				switch err {
+				case nil:
 					localCount++
-				} else if err == ErrEmptyQueue {
+				case ErrEmptyQueue:
 					if localCount >= totalExpected {
 						break
 					}
 					time.Sleep(10 * time.Millisecond)
-				} else {
+				default:
 					// Other errors might happen during concurrent GC
 					time.Sleep(1 * time.Millisecond)
 				}

@@ -79,7 +79,7 @@ func (m *arenaManager) gc() {
 	}
 
 	// startAid - we can delete from 0 up to limitAid-1.
-	for aid := 0; aid < limitAid; aid++ {
+	for aid := range limitAid {
 		// remove from memory if loaded
 		if aa, ok := m.arenas[aid]; ok && aa != nil {
 			_ = m.unloadArena(aid)
@@ -87,10 +87,8 @@ func (m *arenaManager) gc() {
 		delete(m.arenas, aid)
 
 		arenaPath := m.getArenaPath(aid)
-		if _, err := os.Stat(arenaPath); err == nil {
-			if err := os.Remove(arenaPath); err != nil {
-			} else {
-			}
+		if err := os.Remove(arenaPath); err != nil && !os.IsNotExist(err) {
+			return
 		}
 	}
 }
