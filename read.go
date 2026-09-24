@@ -7,6 +7,10 @@ import (
 var (
 	// ErrEmptyQueue is returned when dequeue is performed on an empty queue.
 	ErrEmptyQueue = errors.New("queue is empty")
+	// ErrInvalidMessageLength is returned when the length prefix read from the
+	// queue exceeds the maximum supported message size, indicating the data is
+	// corrupt (e.g. a torn write during a crash).
+	ErrInvalidMessageLength = errors.New("bigqueue: invalid message length")
 )
 
 // IsEmpty returns true when queue is empty for the default consumer.
@@ -166,7 +170,16 @@ func (q *MmapQueue) readLength(aid, offset int) (int, int, int, error) {
 	if err != nil {
 		return 0, 0, 0, err
 	}
-	length := int(aa.ReadUint64At(int64(offset)))
+	rawLength := aa.ReadUint64At(int64(offset))
+	// Validate the length prefix before using it. A corrupt or torn length
+	// (e.g. from a crash mid-write) would otherwise cause an unbounded
+	// allocation in grow() and crash the process with an OOM, or silently
+	// return garbage data. Reject lengths that exceed the maximum supported
+	// message size (which is far below any value that would overflow int).
+	if rawLength > cMaxMessageSize {
+		return 0, 0, 0, ErrInvalidMessageLength
+	}
+	length := int(rawLength)
 
 	// update offset, if offset is equal to arena size,
 	// reset arena to next aid and offset to 0

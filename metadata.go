@@ -267,7 +267,11 @@ func (m *metadata) getConsumer(name string) (int64, error) {
 // getConsumers returns a defensive copy of the in-memory consumer index,
 // mapping consumer name to its metadata address.
 func (m *metadata) getConsumers() map[string]int64 {
-	return m.co
+	consumers := make(map[string]int64, len(m.co))
+	for name, base := range m.co {
+		consumers[name] = base
+	}
+	return consumers
 }
 
 // flush writes the memory state of the metadata arena on to disk.
