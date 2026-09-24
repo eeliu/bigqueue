@@ -30,6 +30,15 @@ type arenaManager struct {
 	md     metadataProvider
 	arenas map[int]*mmap.File
 	inMem  int
+
+	// lastGCLimitAid records the limitAid (exclusive) up to which gc has
+	// already scanned. Arena files with aid < lastGCLimitAid have been
+	// deleted (or deletion was attempted), so gc only needs to scan the
+	// incremental range [lastGCLimitAid, limitAid). The zero value means
+	// gc has not run since process start, in which case the first gc
+	// performs a full scan from aid 0, which also cleans up orphan files
+	// left behind by failed deletions in a previous run.
+	lastGCLimitAid int
 }
 
 // newArenaManager returns a pointer to new arenaManager.
@@ -78,23 +87,32 @@ func (m *arenaManager) gc() {
 
 	// update global head to the minimum among all consumers.
 	// this is to ensure new consumers start from the earliest available data.
-	m.md.putHead(minHeadAid, minHeadOff)
-	if err := m.md.flush(); err != nil {
-		m.conf.Warnf("failed to flush metadata after updating global head; error=%v", err)
-		return
+	// only write and flush when the head actually moved, to avoid an msync
+	// syscall on every gc run.
+	curHeadAid, curHeadOff := m.md.getHead()
+	if minHeadAid != curHeadAid || minHeadOff != curHeadOff {
+		m.md.putHead(minHeadAid, minHeadOff)
+		if err := m.md.flush(); err != nil {
+			m.conf.Warnf("failed to flush metadata after updating global head; error=%v", err)
+			return
+		}
 	}
 
 	// we keep maxArenasToKeep arenas before the minHeadAid
 	// everything before (minHeadAid - maxArenasToKeep) can be deleted.
 	limitAid := minHeadAid - m.conf.maxArenasToKeep
-	if limitAid <= 0 {
+	if limitAid <= m.lastGCLimitAid {
+		// no new deletable range since the last gc run.
 		return
 	}
 
-	m.conf.Infof("garbage collection started; min_head_aid=%d, limit_aid=%d", minHeadAid, limitAid)
+	startAid := m.lastGCLimitAid
+	m.conf.Infof("garbage collection started; min_head_aid=%d, scan_range=[%d,%d)", minHeadAid, startAid, limitAid)
 
-	// startAid - we can delete from 0 up to limitAid-1.
-	for aid := 0; aid < limitAid; aid++ {
+	// delete incrementally from startAid up to limitAid-1. If a deletion
+	// fails, the watermark still advances; the orphan file will be cleaned
+	// up by the full scan on the next process start.
+	for aid := startAid; aid < limitAid; aid++ {
 		// remove from memory if loaded
 		if aa, ok := m.arenas[aid]; ok && aa != nil {
 			_ = m.unloadArena(aid)
@@ -110,6 +128,7 @@ func (m *arenaManager) gc() {
 			}
 		}
 	}
+	m.lastGCLimitAid = limitAid
 }
 
 // getArenaPath returns the full path for a given arena ID.
@@ -126,11 +145,11 @@ func (m *arenaManager) loadOrGetArena(aid int) (*mmap.File, error) {
 
 	m.conf.Debugf("loading or creating arena; aid=%d", aid)
 
-	// if this is a new arena being requested (tail expansion)
-	// getTail doesn't help here because writer might be calling it before metadata update
-	// but basically if it's not in the map, we try to load or create it.
-	// In the original slice logic, relAid == len(m.arenas) triggered GC.
-	// Here we can check if it's beyond a certain aid or just trigger GC occasionally.
+	// gc is only triggered when the tail expands into a new arena file.
+	// loading an existing arena (read path) must not trigger disk
+	// operations like file deletions or metadata flushes.
+	tailAid, _ := m.md.getTail()
+	isNewArena := aid > tailAid
 
 	// before we get a new arena into memory, we need to ensure that after fetching
 	// a new arena into memory, we do not cross the provided memory limit.
@@ -145,7 +164,9 @@ func (m *arenaManager) loadOrGetArena(aid int) (*mmap.File, error) {
 		return nil, err
 	}
 
-	m.gc()
+	if isNewArena {
+		m.gc()
+	}
 
 	return m.arenas[aid], nil
 }
@@ -216,15 +237,24 @@ func (m *arenaManager) unloadArena(aid int) error {
 	}
 
 	m.conf.Debugf("unmapping arena; aid=%d", aid)
-	if err := aa.Unmap(); err != nil {
+	err := aa.Unmap()
+
+	// mmap.File.Unmap clears its internal data even when munmap fails,
+	// so the arena is unusable either way. Always drop it from the map
+	// and fix the in-memory count to avoid handing out a stale mapping.
+	m.inMem--
+	delete(m.arenas, aid)
+
+	if err != nil {
 		return fmt.Errorf("error in unmap :: %w", err)
 	}
 
-	m.inMem--
-	delete(m.arenas, aid)
 	return nil
 }
 
+// flush syncs only the arena files to disk. Flushing metadata is the
+// responsibility of the caller (MmapQueue.Flush), so that metadata is
+// flushed exactly once per queue flush.
 func (m *arenaManager) flush() error {
 	for _, aa := range m.arenas {
 		if aa == nil {
@@ -234,10 +264,6 @@ func (m *arenaManager) flush() error {
 		if err := aa.Flush(syscall.MS_SYNC); err != nil {
 			return fmt.Errorf("error in flushing arena file :: %w", err)
 		}
-	}
-
-	if err := m.md.flush(); err != nil {
-		return err
 	}
 
 	return nil
