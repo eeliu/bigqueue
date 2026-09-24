@@ -11,6 +11,14 @@ const (
 	cInt64Size       = 8
 	cFilePerm        = 0744
 	cDefaultConsumer = "__default__"
+
+	// cMaxMessageSize is the maximum allowed size (in bytes) of a single
+	// message payload, including its 8-byte length prefix. It is a safety
+	// ceiling used to reject corrupt length prefixes (e.g. from a torn write
+	// during a crash) that would otherwise cause an unbounded allocation and
+	// crash the process with an out-of-memory error. The value is far larger
+	// than any realistic message while still fitting comfortably in an int.
+	cMaxMessageSize = 1 << 31 // 2 GiB
 )
 
 var (
@@ -31,6 +39,9 @@ var (
 	// payload does not contain a valid tag-length prefix, indicating the message
 	// was not written by EnqueueWithTag or that the data is corrupt.
 	ErrInvalidTaggedMessage = errors.New("bigqueue: invalid tagged message")
+	// ErrMessageTooLarge is returned when the message passed to an Enqueue
+	// method exceeds the configured maximum message size.
+	ErrMessageTooLarge = errors.New("bigqueue: message exceeds maximum allowed size")
 )
 
 // MmapQueue implements Queue interface.
@@ -46,6 +57,9 @@ type MmapQueue struct {
 	drain chan struct{}
 	quit  chan struct{}
 	wg    sync.WaitGroup
+
+	closeOnce sync.Once
+	closeErr  error
 
 	br bytesReader
 	sr stringReader
@@ -159,31 +173,34 @@ func (q *MmapQueue) FromConsumer(name string, from *Consumer) (*Consumer, error)
 }
 
 // Close will close metadata and arena manager.
+// Close is idempotent: subsequent calls return the same result as the first
+// call and do not panic.
 func (q *MmapQueue) Close() error {
-	// wait for background go routines to finish.
-	// we need to acquire lock afterwards so that we avoid a livelock
-	// between periodic flush goroutine and Close() function.
-	// A possible lock cycle is here:
-	//        Close() after it has acquired the lock ->
-	//     -> Close() waiting for periodic flush goroutine to stop ->
-	//     -> Periodic flush goroutine is trying to acquire the lock ->
-	//     -> Close() to release the lock
-	close(q.quit)
-	q.wg.Wait()
+	q.closeOnce.Do(func() {
+		// wait for background go routines to finish.
+		// we need to acquire lock afterwards so that we avoid a livelock
+		// between periodic flush goroutine and Close() function.
+		// A possible lock cycle is here:
+		//        Close() after it has acquired the lock ->
+		//     -> Close() waiting for periodic flush goroutine to stop ->
+		//     -> Periodic flush goroutine is trying to acquire the lock ->
+		//     -> Close() to release the lock
+		close(q.quit)
+		q.wg.Wait()
 
-	q.lock.Lock()
-	defer q.lock.Unlock()
+		q.lock.Lock()
+		defer q.lock.Unlock()
 
-	var retErr error
-	if err := q.md.close(); err != nil {
-		retErr = err
-	}
+		if err := q.md.close(); err != nil {
+			q.closeErr = err
+		}
 
-	if err := q.am.close(); err != nil {
-		retErr = err
-	}
+		if err := q.am.close(); err != nil {
+			q.closeErr = err
+		}
+	})
 
-	return retErr
+	return q.closeErr
 }
 
 // Flush syncs the in memory content of bigqueue to disk.

@@ -83,7 +83,7 @@ func BenchmarkNewMmapQueue(b *testing.B) {
 
 				b.StartTimer()
 				bq, err := NewMmapQueue(dir, SetArenaSize(param.arenaSize), SetPeriodicFlushDuration(0),
-					SetMaxInMemArenas(param.maxInMemArenaCount), SetPeriodicFlushOps(0))
+					SetMaxInMemArenas(param.maxInMemArenaCount), SetPeriodicFlushOps(0), SetMaxMessageSize(8*1024*1024))
 				if err != nil {
 					b.Fatalf("unable to create bigqueue: %v", err)
 				}
@@ -107,7 +107,7 @@ func BenchmarkEnqueue(b *testing.B) {
 			createBenchDir(b, dir)
 
 			bq, err := NewMmapQueue(dir, SetArenaSize(param.arenaSize), SetPeriodicFlushOps(0),
-				SetMaxInMemArenas(param.maxInMemArenaCount), SetPeriodicFlushDuration(0))
+				SetMaxInMemArenas(param.maxInMemArenaCount), SetPeriodicFlushDuration(0), SetMaxMessageSize(8*1024*1024))
 			if err != nil {
 				b.Fatalf("unable to create bigqueue: %v", err)
 			}
@@ -138,7 +138,7 @@ func BenchmarkEnqueueString(b *testing.B) {
 			createBenchDir(b, dir)
 
 			bq, err := NewMmapQueue(dir, SetArenaSize(param.arenaSize), SetPeriodicFlushOps(0),
-				SetMaxInMemArenas(param.maxInMemArenaCount), SetPeriodicFlushDuration(0))
+				SetMaxInMemArenas(param.maxInMemArenaCount), SetPeriodicFlushDuration(0), SetMaxMessageSize(8*1024*1024))
 			if err != nil {
 				b.Fatalf("unable to create bigqueue: %v", err)
 			}
@@ -170,7 +170,7 @@ func BenchmarkDequeue(b *testing.B) {
 			createBenchDir(b, dir)
 
 			bq, err := NewMmapQueue(dir, SetArenaSize(param.arenaSize), SetPeriodicFlushDuration(0),
-				SetMaxInMemArenas(param.maxInMemArenaCount), SetPeriodicFlushOps(0))
+				SetMaxInMemArenas(param.maxInMemArenaCount), SetPeriodicFlushOps(0), SetMaxMessageSize(8*1024*1024))
 			if err != nil {
 				b.Fatalf("unable to create bigqueue: %v", err)
 			}
@@ -207,7 +207,7 @@ func BenchmarkDequeueString(b *testing.B) {
 			createBenchDir(b, dir)
 
 			bq, err := NewMmapQueue(dir, SetArenaSize(param.arenaSize), SetPeriodicFlushDuration(0),
-				SetMaxInMemArenas(param.maxInMemArenaCount), SetPeriodicFlushOps(0))
+				SetMaxInMemArenas(param.maxInMemArenaCount), SetPeriodicFlushOps(0), SetMaxMessageSize(8*1024*1024))
 			if err != nil {
 				b.Fatalf("unable to create bigqueue: %v", err)
 			}
@@ -281,7 +281,7 @@ func BenchmarkEnqueueWithTag(b *testing.B) {
 			createBenchDir(b, dir)
 
 			bq, err := NewMmapQueue(dir, SetArenaSize(param.arenaSize), SetPeriodicFlushOps(0),
-				SetMaxInMemArenas(param.maxInMemArenaCount), SetPeriodicFlushDuration(0))
+				SetMaxInMemArenas(param.maxInMemArenaCount), SetPeriodicFlushDuration(0), SetMaxMessageSize(8*1024*1024))
 			if err != nil {
 				b.Fatalf("unable to create bigqueue: %v", err)
 			}
@@ -313,7 +313,7 @@ func BenchmarkDequeueWithTag(b *testing.B) {
 			createBenchDir(b, dir)
 
 			bq, err := NewMmapQueue(dir, SetArenaSize(param.arenaSize), SetPeriodicFlushDuration(0),
-				SetMaxInMemArenas(param.maxInMemArenaCount), SetPeriodicFlushOps(0))
+				SetMaxInMemArenas(param.maxInMemArenaCount), SetPeriodicFlushOps(0), SetMaxMessageSize(8*1024*1024))
 			if err != nil {
 				b.Fatalf("unable to create bigqueue: %v", err)
 			}
@@ -361,7 +361,7 @@ func BenchmarkBacklogBytes(b *testing.B) {
 			dir := path.Join(os.TempDir(), "testdir")
 			createBenchDir(b, dir)
 
-			bq, err := NewMmapQueue(dir, SetPeriodicFlushDuration(0), SetPeriodicFlushOps(0))
+			bq, err := NewMmapQueue(dir, SetPeriodicFlushDuration(0), SetPeriodicFlushOps(0), SetMaxMessageSize(cMaxMessageSize))
 			if err != nil {
 				b.Fatalf("unable to create bigqueue: %v", err)
 			}

@@ -122,7 +122,7 @@ func TestEnqueueLargeMessage(t *testing.T) {
 	t.Parallel()
 
 	testDir := t.TempDir()
-	bq, err := NewMmapQueue(testDir)
+	bq, err := NewMmapQueue(testDir, SetMaxMessageSize(cDefaultArenaSize))
 	if err != nil {
 		t.Fatalf("unable to get BigQueue: %v", err)
 	}
@@ -156,7 +156,7 @@ func TestEnqueueOverlapLength(t *testing.T) {
 	t.Parallel()
 
 	testDir := t.TempDir()
-	bq, err := NewMmapQueue(testDir)
+	bq, err := NewMmapQueue(testDir, SetMaxMessageSize(cDefaultArenaSize))
 	if err != nil {
 		t.Fatalf("unable to get BigQueue: %v", err)
 	}
@@ -205,7 +205,7 @@ func TestEnqueueLargeNumberOfMessages(t *testing.T) {
 	t.Parallel()
 
 	testDir := t.TempDir()
-	bq, err := NewMmapQueue(testDir)
+	bq, err := NewMmapQueue(testDir, SetMaxMessageSize(2*cDefaultArenaSize))
 	if err != nil {
 		t.Fatalf("unable to get BigQueue: %s", err)
 	}
@@ -1362,7 +1362,7 @@ func TestEnqueueWithTagLargeMessage(t *testing.T) {
 	t.Parallel()
 
 	testDir := t.TempDir()
-	bq, err := NewMmapQueue(testDir)
+	bq, err := NewMmapQueue(testDir, SetMaxMessageSize(2*cDefaultArenaSize))
 	if err != nil {
 		t.Fatalf("unable to get BigQueue :: %v", err)
 	}
