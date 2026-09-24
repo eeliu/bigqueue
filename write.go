@@ -2,6 +2,10 @@ package bigqueue
 
 // Enqueue adds a new slice of byte element to the tail of the queue.
 func (q *MmapQueue) Enqueue(message []byte) error {
+	if len(message) > q.conf.maxMessageSize {
+		return ErrMessageTooLarge
+	}
+
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
@@ -18,6 +22,9 @@ func (q *MmapQueue) EnqueueWithTag(message []byte, tag []byte) error {
 	if len(tag) > 255 {
 		return ErrTagTooLong
 	}
+	if len(message) > q.conf.maxMessageSize {
+		return ErrMessageTooLarge
+	}
 
 	q.lock.Lock()
 	defer q.lock.Unlock()
@@ -32,6 +39,10 @@ func (q *MmapQueue) EnqueueWithTag(message []byte, tag []byte) error {
 
 // EnqueueString adds a new string element to the tail of the queue.
 func (q *MmapQueue) EnqueueString(message string) error {
+	if len(message) > q.conf.maxMessageSize {
+		return ErrMessageTooLarge
+	}
+
 	q.lock.Lock()
 	defer q.lock.Unlock()
 

@@ -39,6 +39,9 @@ var (
 	// payload does not contain a valid tag-length prefix, indicating the message
 	// was not written by EnqueueWithTag or that the data is corrupt.
 	ErrInvalidTaggedMessage = errors.New("bigqueue: invalid tagged message")
+	// ErrMessageTooLarge is returned when the message passed to an Enqueue
+	// method exceeds the configured maximum message size.
+	ErrMessageTooLarge = errors.New("bigqueue: message exceeds maximum allowed size")
 )
 
 // MmapQueue implements Queue interface.

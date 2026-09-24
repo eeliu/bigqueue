@@ -15,6 +15,10 @@ const (
 	// values chosen arbitrarily
 	cDefaultMutOps      = 1000000
 	cDefaultflushPeriod = time.Second
+
+	// cDefaultMaxMessageSize is the default maximum size (in bytes) of a single
+	// message that can be enqueued. Messages larger than this are rejected.
+	cDefaultMaxMessageSize = 1 * 1024 * 1024 // 1 MiB
 )
 
 var (
@@ -24,6 +28,8 @@ var (
 	ErrTooFewInMemArenas = errors.New("too few in memory arenas")
 	// ErrNegativeMaxArenasToKeep is returned when max arenas to keep is negative.
 	ErrNegativeMaxArenasToKeep = errors.New("max arenas to keep cannot be negative")
+	// ErrInvalidMaxMessageSize is returned when max message size is <= 0.
+	ErrInvalidMaxMessageSize = errors.New("max message size must be positive")
 )
 
 // Logger is an interface that allows bigqueue to log messages.
@@ -40,6 +46,7 @@ type bqConfig struct {
 	arenaSize       int
 	maxInMemArenas  int
 	maxArenasToKeep int
+	maxMessageSize  int
 	flushMutOps     int64
 	flushPeriod     time.Duration
 	logger          Logger
@@ -55,6 +62,7 @@ func newConfig() *bqConfig {
 		arenaSize:       cDefaultArenaSize,
 		maxInMemArenas:  cMinMaxInMemArenas,
 		maxArenasToKeep: 0,
+		maxMessageSize:  cDefaultMaxMessageSize,
 		flushMutOps:     cDefaultMutOps,
 		flushPeriod:     cDefaultflushPeriod,
 		logger:          nil,
@@ -131,6 +139,23 @@ func SetMaxArenasToKeep(maxArenasToKeep int) Option {
 			return ErrNegativeMaxArenasToKeep
 		}
 		c.maxArenasToKeep = maxArenasToKeep
+		return nil
+	}
+}
+
+// SetMaxMessageSize returns an Option that sets the maximum size (in bytes) of
+// a single message that can be enqueued. Messages larger than this limit are
+// rejected with ErrMessageTooLarge. The default is 1 MiB. The value must be
+// positive and must not exceed the hard safety ceiling (cMaxMessageSize).
+func SetMaxMessageSize(maxMessageSize int) Option {
+	return func(c *bqConfig) error {
+		if maxMessageSize <= 0 {
+			return ErrInvalidMaxMessageSize
+		}
+		if maxMessageSize > cMaxMessageSize {
+			return ErrInvalidMaxMessageSize
+		}
+		c.maxMessageSize = maxMessageSize
 		return nil
 	}
 }

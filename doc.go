@@ -44,6 +44,14 @@
 // In this case, bigqueue will never allocate more memory than `4KB*10=40KB`. This
 // memory is above and beyond the memory used in buffers for copying data.
 //
+// Bigqueue also limits the maximum size of a single message that can be enqueued.
+// By default this limit is 1 MiB. Messages larger than the limit are rejected with
+// ErrMessageTooLarge. The limit can be changed with SetMaxMessageSize:
+//
+//	bq, err := bigqueue.NewMmapQueue("path/to/queue", bigqueue.SetMaxMessageSize(10*1024*1024))
+//
+// In this case, messages up to 10 MiB are accepted.
+//
 // Bigqueue allows to set periodic flush based on either elapsed time or number
 // of mutate (enqueue/dequeue) operations. Flush syncs the in memory changes of all
 // memory mapped files with disk. *This is a best effort flush*. Elapsed time and
