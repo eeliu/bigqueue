@@ -245,10 +245,14 @@ func (q *MmapQueue) periodicFlush() {
 		case <-q.quit:
 			return
 		case <-q.drain:
-			_ = q.Flush()
+			if err := q.Flush(); err != nil {
+				q.conf.Errorf("periodic flush failed; error=%v", err)
+			}
 		case <-timer.C:
 			drainFlag = true
-			_ = q.Flush()
+			if err := q.Flush(); err != nil {
+				q.conf.Errorf("periodic flush failed; error=%v", err)
+			}
 		}
 	}
 }
